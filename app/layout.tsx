@@ -73,7 +73,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/images/mama-logo.png" type="image/png" />
+        <link rel="shortcut icon" href="/images/mama-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/mama-logo.png" />
         {/* Guard script to prevent third-party browser extensions from popping runtime error overlays or console noise */}
         <script
           dangerouslySetInnerHTML={{
