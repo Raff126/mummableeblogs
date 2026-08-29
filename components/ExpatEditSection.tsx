@@ -8,30 +8,30 @@ export default function ExpatEditSection() {
       id: 'expat-1',
       badge: 'COMMUNITY & FRIENDSHIPS',
       title: 'How to Build a Supportive Mum Village as an Expat',
-      category: 'Family Life',
+      category: 'The Expat Edit',
       readTime: '4 min read',
       image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&fit=crop&q=80',
-      link: '/family-life/how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
+      link: '/the-expat-edit/how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
       bgColor: 'bg-[#B75B70]',
     },
     {
       id: 'expat-2',
       badge: 'SCHOOL & EDUCATION',
       title: 'Choosing Between British, IB, & American Curriculums',
-      category: 'School & Learning',
+      category: 'The Expat Edit',
       readTime: '6 min read',
       image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&fit=crop&q=80',
-      link: '/school-and-activities/choosing-between-british-ib-and-american-curriculums-in-the-uae',
+      link: '/the-expat-edit/choosing-between-british-ib-and-american-curriculums-in-the-uae',
       bgColor: 'bg-[#4D7987]',
     },
     {
       id: 'expat-3',
       badge: 'UAE LIVING & SEASONS',
       title: 'Handling Seasonal Transitions & Summer with Kids',
-      category: 'Home & Routines',
+      category: 'The Expat Edit',
       readTime: '4 min read',
       image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=800&fit=crop&q=80',
-      link: '/family-life/how-we-handle-seasonal-transitions-and-summer-months-with-kids',
+      link: '/the-expat-edit/how-we-handle-seasonal-transitions-and-summer-months-with-kids',
       bgColor: 'bg-[#D79A30]',
     },
   ];
@@ -53,10 +53,10 @@ export default function ExpatEditSection() {
             </p>
           </div>
           <Link
-            href="/family-life"
+            href="/the-expat-edit"
             className="text-xs font-bold tracking-wider text-[#B75B70] hover:text-[#683846] transition-colors uppercase self-start sm:self-auto inline-flex items-center gap-1"
           >
-            <span>View All Family Guides</span>
+            <span>View All Expat Guides</span>
             <span>→</span>
           </Link>
         </div>

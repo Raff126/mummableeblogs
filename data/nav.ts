@@ -7,7 +7,7 @@ export const PRIMARY_NAV: NavItem[] = [
   { label: 'Home', path: '/' },
   { label: 'UAE With Kids', path: '/uae-with-kids' },
   { label: 'Family Life', path: '/family-life' },
-  { label: 'The Expat Edit', path: '/#expat-edit' },
+  { label: 'The Expat Edit', path: '/the-expat-edit' },
   { label: 'Food', path: '/food' },
   { label: 'Travel', path: '/travel' },
   { label: 'Brands We Love', path: '/brands-we-love' },

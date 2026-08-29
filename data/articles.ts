@@ -577,8 +577,8 @@ export const ARTICLES: ArticleItem[] = [
   {
     id: 'art-15',
     slug: 'how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
-    category: 'family-life',
-    subcategory: 'Mum Notes',
+    category: 'the-expat-edit',
+    subcategory: 'Expat Life',
     title: 'How to Build a Supportive Mum Community as an Expat in the UAE',
     excerpt: 'Navigating motherhood away from extended family can feel daunting. Here is how we found our trusted village of fellow parents in Dubai and Abu Dhabi.',
     answerSummary: 'Build your expat mum village through neighborhood baby/toddler sensory classes, school gate coffee mornings, and active local WhatsApp playgroup communities. Be the first to suggest a playground catch-up.',
@@ -651,8 +651,8 @@ export const ARTICLES: ArticleItem[] = [
   {
     id: 'art-17',
     slug: 'how-we-handle-seasonal-transitions-and-summer-months-with-kids',
-    category: 'family-life',
-    subcategory: 'UAE Life',
+    category: 'the-expat-edit',
+    subcategory: 'UAE Living',
     title: 'How We Handle Seasonal Transitions & Summer Months with Kids',
     excerpt: 'Living in the UAE means living by the seasons. Here is how we prepare our home, routines, and family mindset as the weather warms up.',
     answerSummary: 'Embrace the two distinct UAE seasons: outdoor exploration from October to April, and indoor creativity, swimming camps, and travel during peak summer. Shift weekend outdoor plans to early 7:30 AM mornings.',
@@ -769,8 +769,8 @@ export const ARTICLES: ArticleItem[] = [
   {
     id: 'art-19',
     slug: 'choosing-between-british-ib-and-american-curriculums-in-the-uae',
-    category: 'school-and-activities',
-    subcategory: 'Learning',
+    category: 'the-expat-edit',
+    subcategory: 'School Choices',
     title: 'Choosing Between British, IB, and American Curriculums in the UAE',
     excerpt: 'An unbiased parent’s breakdown of the 3 most popular school curriculums in Dubai and Abu Dhabi to help you make an informed family choice.',
     answerSummary: 'Choose British (National Curriculum/IGCSE) for structured subject mastery and UK university alignment. Choose IB (PYP/MYP) for inquiry-based global problem solving. Choose American for flexible continuous assessment and US college pathways.',
