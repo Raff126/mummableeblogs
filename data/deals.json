@@ -1,0 +1,26 @@
+[
+  {
+    "id": "deal-1788019887315",
+    "title": "Trendyol",
+    "code": "MUMMA",
+    "discountBadge": "10% off",
+    "description": "",
+    "link": "https://www.trendyol.com/en",
+    "expirationDate": "2026-08-31",
+    "showOnHomepage": true,
+    "showOnDealsPage": true,
+    "createdAt": "2026-08-29"
+  },
+  {
+    "id": "deal-1788019418765",
+    "title": "Justhype",
+    "code": "BEE15",
+    "discountBadge": "15%",
+    "description": "",
+    "link": "https://justhype.ae/",
+    "expirationDate": "2026-08-31",
+    "showOnHomepage": true,
+    "showOnDealsPage": true,
+    "createdAt": "2026-08-29"
+  }
+]
