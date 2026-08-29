@@ -10,11 +10,33 @@ interface PageProps {
 }
 
 export function generateStaticParams() {
-  const articles = getAllArticles();
-  return articles.map((article) => ({
-    category: article.category,
-    slug: article.slug,
-  }));
+  const articles = getAllArticles().filter((a) => a.slug && a.category);
+  const params: { category: string; slug: string }[] = [];
+  const seen = new Set<string>();
+
+  articles.forEach((article) => {
+    const key = `${article.category}/${article.slug}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      params.push({ category: article.category, slug: article.slug });
+    }
+
+    if (article.category === 'the-expat-edit') {
+      const expatKey = `expat-edit/${article.slug}`;
+      if (!seen.has(expatKey)) {
+        seen.add(expatKey);
+        params.push({ category: 'expat-edit', slug: article.slug });
+      }
+    } else if (article.category === 'expat-edit') {
+      const theExpatKey = `the-expat-edit/${article.slug}`;
+      if (!seen.has(theExpatKey)) {
+        seen.add(theExpatKey);
+        params.push({ category: 'the-expat-edit', slug: article.slug });
+      }
+    }
+  });
+
+  return params;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
