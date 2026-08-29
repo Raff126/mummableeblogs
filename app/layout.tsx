@@ -52,6 +52,17 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  icons: {
+    icon: [
+      { url: '/images/mama-logo.png', sizes: 'any' },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.png', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/images/mama-logo.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/images/mama-logo.png',
+  },
 };
 
 export default function RootLayout({
