@@ -34,6 +34,16 @@ export default function ExpatEditSection() {
       link: '/the-expat-edit/how-we-handle-seasonal-transitions-and-summer-months-with-kids',
       bgColor: 'bg-[#D79A30]',
     },
+    {
+      id: 'expat-4',
+      badge: 'PARENTING & ROUTINES',
+      title: 'Our Daily UAE Family Routine: School & Heat',
+      category: 'The Expat Edit',
+      readTime: '4 min read',
+      image: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&fit=crop&q=80',
+      link: '/the-expat-edit/our-daily-uae-family-routine-balancing-school-heat-and-activities',
+      bgColor: 'bg-[#683846]',
+    },
   ];
 
   return (
@@ -61,8 +71,8 @@ export default function ExpatEditSection() {
           </Link>
         </div>
 
-        {/* 3 Featured Expat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 4 Featured Expat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {expatGuides.map((guide) => (
             <Link
               key={guide.id}
