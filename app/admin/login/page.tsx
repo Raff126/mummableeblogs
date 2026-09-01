@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { setAuthenticated, isAuthenticated, validateAdminCredentials } from '../../../data/store';
+import { isAuthenticated, loginWithFirebase } from '../../../data/store';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('admin@mummamabeeblogs.com');
@@ -31,17 +31,20 @@ export default function AdminLoginPage() {
 
     setIsLoading(true);
 
-    // Validate credentials
-    const isValid = validateAdminCredentials(email, password);
+    try {
+      const result = await loginWithFirebase(email, password);
 
-    if (isValid) {
-      setAuthenticated(true);
-      setTimeout(() => {
-        router.push('/admin');
-      }, 500);
-    } else {
+      if (result.success) {
+        setTimeout(() => {
+          router.push('/admin');
+        }, 400);
+      } else {
+        setIsLoading(false);
+        setError(result.error || 'Invalid email or password. Please try again.');
+      }
+    } catch (err: any) {
       setIsLoading(false);
-      setError('Invalid email or password. Please check your credentials and try again.');
+      setError(err?.message || 'An unexpected error occurred during login.');
     }
   };
 

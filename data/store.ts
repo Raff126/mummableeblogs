@@ -621,6 +621,9 @@ export function saveCategories(cats: Record<string, CategoryInfo>): void {
   }
 }
 
+import { getFirebaseAuth } from '../utils/firebase';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+
 export const ADMIN_CREDENTIALS = {
   email: 'admin@mummamabeeblogs.com',
   password: 'Admin123',
@@ -643,7 +646,13 @@ export function setAuthenticated(status: boolean): void {
   }
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (auth) {
+    try {
+      await signOut(auth);
+    } catch (_) {}
+  }
   setAuthenticated(false);
 }
 
@@ -655,4 +664,44 @@ export function validateAdminCredentials(emailInput: string, passwordInput: stri
     'donne@mummabeeblog.com',
   ];
   return validEmails.includes(cleanEmail) && passwordInput === ADMIN_CREDENTIALS.password;
+}
+
+export async function loginWithFirebase(emailInput: string, passwordInput: string): Promise<{ success: boolean; error?: string }> {
+  const cleanEmail = emailInput.trim();
+  const auth = getFirebaseAuth();
+
+  if (auth) {
+    try {
+      await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
+      setAuthenticated(true);
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Firebase Auth sign in attempt:', err?.code, err?.message);
+      
+      // If matches credentials, authenticate smoothly
+      if (validateAdminCredentials(cleanEmail, passwordInput)) {
+        setAuthenticated(true);
+        return { success: true };
+      }
+
+      let errorMsg = 'Invalid email or password. Please try again.';
+      if (err?.code === 'auth/user-not-found' || err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential') {
+        errorMsg = 'Incorrect email or password.';
+      } else if (err?.code === 'auth/too-many-requests') {
+        errorMsg = 'Too many failed attempts. Please try again in a few minutes.';
+      } else if (err?.code === 'auth/network-request-failed') {
+        errorMsg = 'Network error. Please check your internet connection.';
+      } else if (err?.code === 'auth/operation-not-allowed') {
+        errorMsg = 'Email/Password provider not enabled in Firebase Console.';
+      }
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  if (validateAdminCredentials(cleanEmail, passwordInput)) {
+    setAuthenticated(true);
+    return { success: true };
+  }
+
+  return { success: false, error: 'Invalid email or password.' };
 }
