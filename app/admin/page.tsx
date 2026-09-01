@@ -14,8 +14,29 @@ export default function AdminDashboardPage() {
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
+  const loadArticles = () => {
     setArticles(getInitialArticles());
+    fetch(`/api/articles?t=${Date.now()}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data: Article[]) => {
+        if (Array.isArray(data)) {
+          setArticles(data);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadArticles();
+    const handleUpdate = () => loadArticles();
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
   }, []);
 
   const handleTogglePublish = (id: string) => {

@@ -14,8 +14,39 @@ export default function AdminArticlesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
+  const loadLatestArticles = () => {
+    const local = getInitialArticles();
+    setArticles(local);
+
+    fetch(`/api/articles?t=${Date.now()}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data: Article[]) => {
+        if (Array.isArray(data)) {
+          try {
+            localStorage.setItem('mummabee_articles', JSON.stringify(data));
+          } catch (_) {}
+          setArticles(data);
+        }
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
-    setArticles(getInitialArticles());
+    loadLatestArticles();
+
+    const handleUpdate = () => {
+      loadLatestArticles();
+    };
+
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
   }, []);
 
   const handleTogglePublish = (id: string) => {

@@ -317,40 +317,28 @@ export const DEFAULT_SUBSCRIBERS: Subscriber[] = [
 
 export const DEFAULT_DEALS: DiscountCode[] = [
   {
-    id: 'deal-1',
-    title: 'Green Planet Dubai Family Pass',
-    code: 'MUMMABEE20',
-    discountBadge: '20% OFF',
-    description: 'Get 20% off general admission family passes for indoor rainforest adventures.',
-    link: 'https://thegreenplanetdubai.com',
+    id: 'deal-1788019887315',
+    title: 'Trendyol',
+    code: 'MUMMA',
+    discountBadge: '10% off',
+    description: '10% off your entire fashion, home, and kids collection on Trendyol UAE.',
+    link: 'https://www.trendyol.com/en',
     expirationDate: '2026-12-31',
     showOnHomepage: true,
     showOnDealsPage: true,
-    createdAt: '2026-08-28',
+    createdAt: '2026-08-29',
   },
   {
-    id: 'deal-2',
-    title: 'Trampo Extreme Weekend Jump Pass',
-    code: 'MUMMABEE15',
-    discountBadge: '15% OFF',
-    description: '15% discount on 2-hour weekend passes across Nakheel Mall and Dubai Mall.',
-    link: 'https://trampo-uae.com',
-    expirationDate: '2026-11-30',
+    id: 'deal-1788019418765',
+    title: 'Justhype',
+    code: 'BEE15',
+    discountBadge: '15% off',
+    description: '15% off trendy kids streetwear, backpacks, and casual family wear across the UAE.',
+    link: 'https://justhype.ae/',
+    expirationDate: '2026-12-31',
     showOnHomepage: true,
     showOnDealsPage: true,
-    createdAt: '2026-08-28',
-  },
-  {
-    id: 'deal-3',
-    title: 'Al Barari Family Breakfast & Farm Tour',
-    code: 'MUMMAFARMDAY',
-    discountBadge: 'AED 50 OFF',
-    description: 'AED 50 voucher on total family breakfast orders over AED 250 with playground access.',
-    link: 'https://thefarmdubai.com',
-    expirationDate: '2026-10-31',
-    showOnHomepage: true,
-    showOnDealsPage: true,
-    createdAt: '2026-08-28',
+    createdAt: '2026-08-29',
   },
 ];
 
@@ -406,6 +394,7 @@ export function getInitialArticles(): Article[] {
 export async function saveArticles(articles: Article[]): Promise<boolean> {
   if (typeof window !== 'undefined') {
     safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
+    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ARTICLES, data: articles } }));
 
     try {
       const response = await fetch('/api/articles', {
@@ -627,6 +616,9 @@ export function getInitialCategories(): Record<string, CategoryInfo> {
 
 export function saveCategories(cats: Record<string, CategoryInfo>): void {
   safeSetLocalStorage(STORAGE_KEYS.CATEGORIES, JSON.stringify(cats));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.CATEGORIES, data: cats } }));
+  }
 }
 
 export function isAuthenticated(): boolean {

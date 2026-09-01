@@ -10,6 +10,7 @@ interface DiscountCodesSectionProps {
 export default function DiscountCodesSection({ placement = 'all' }: DiscountCodesSectionProps) {
   const [deals, setDeals] = useState<DiscountCode[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const loadDeals = () => {
     const local = getInitialDeals();
@@ -26,6 +27,7 @@ export default function DiscountCodesSection({ placement = 'all' }: DiscountCode
   };
 
   useEffect(() => {
+    setMounted(true);
     loadDeals();
 
     const handleUpdate = (e: any) => {
@@ -62,7 +64,7 @@ export default function DiscountCodesSection({ placement = 'all' }: DiscountCode
   });
 
   const getExpirationDays = (expDate?: string) => {
-    if (!expDate) return null;
+    if (!mounted || !expDate) return null;
     const exp = new Date(expDate);
     if (expDate.length <= 10) {
       exp.setHours(23, 59, 59, 999);

@@ -53,14 +53,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [
-      { url: '/images/mama-logo.png', sizes: 'any' },
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon.png', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/images/mama-logo.png', sizes: '180x180', type: 'image/png' },
-    ],
+    icon: '/images/mama-logo.png',
+    apple: '/images/mama-logo.png',
     shortcut: '/images/mama-logo.png',
   },
 };

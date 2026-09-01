@@ -11,12 +11,10 @@ export default function LatestGuidesSection() {
   const [visibleCount, setVisibleCount] = useState<number>(4);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    // 1. Load from local store immediately
+  const refreshArticles = () => {
     const local = getInitialArticles();
     const published = (local.length > 0 ? local : getAllArticles()).filter((a) => !a.isDraft);
 
-    // Sort newest first
     const sorted = [...published].sort((a, b) => {
       const timeA = new Date(a.publishedAt).getTime() || 0;
       const timeB = new Date(b.publishedAt).getTime() || 0;
@@ -27,8 +25,7 @@ export default function LatestGuidesSection() {
     setArticles(sorted);
     setIsLoading(false);
 
-    // 2. Refresh from server API in background
-    fetch('/api/articles')
+    fetch(`/api/articles?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((apiArticles: ArticleItem[]) => {
         if (Array.isArray(apiArticles) && apiArticles.length > 0) {
@@ -42,7 +39,25 @@ export default function LatestGuidesSection() {
           setArticles(apiSorted);
         }
       })
-      .catch((err) => console.error('Error refreshing articles:', err));
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshArticles();
+
+    const handleUpdate = () => {
+      refreshArticles();
+    };
+
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
   }, []);
 
   const handleLoadMore = () => {

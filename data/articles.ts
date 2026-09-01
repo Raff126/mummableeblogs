@@ -840,6 +840,213 @@ export const ARTICLES: ArticleItem[] = [
     seoTitle: 'UAE Mid-Term Holiday Camps & Activity Guide | MummaBeeBlog',
     seoDescription: 'Guide to managing UAE school mid-term breaks with top holiday camps, sports programs, and family downtime.',
   },
+  {
+    id: 'art-21',
+    slug: 'pureborn-eco-friendly-bamboo-nappies-review',
+    category: 'brands-we-love',
+    subcategory: 'Family Essentials',
+    title: 'PureBorn Eco-Friendly Bamboo Wipes & Nappies: Our Honest Mum Review',
+    excerpt: 'We put PureBorn\'s hypoallergenic, plant-based nappies and organic wipes to the test through busy UAE school runs and hot summer days.',
+    answerSummary: 'PureBorn bamboo nappies offer excellent leak protection with breathable, gentle materials suited for sensitive skin in the UAE warm climate. Their organic grapefruit seed wipes are a staple in our family travel bag.',
+    content: `
+      <h2>Why We Tried PureBorn in the UAE</h2>
+      <p>With high temperatures and sensitive skin, finding nappies and wipes that prevent rashes without nasty chemicals was a top priority for our girls. PureBorn, a UAE homegrown favourite, has been our daily go-to.</p>
+      <h2>What Makes Them Stand Out</h2>
+      <ul>
+        <li><strong>Ultra-soft Organic Bamboo:</strong> Hypoallergenic and highly breathable for humid days.</li>
+        <li><strong>Zero Fragrance or Chlorine:</strong> Formulated without harsh allergens.</li>
+        <li><strong>Fun Prints:</strong> Stylish animal prints and pastel patterns the kids love.</li>
+      </ul>
+      <h2>Donne's Final Verdict</h2>
+      <p>Highly recommended for eco-conscious parents looking for reliable, gentle baby essentials in the UAE.</p>
+    `,
+    author: 'Donne',
+    publishedAt: '2026-08-28',
+    lastUpdated: 'August 2026',
+    readTime: '4 min read',
+    featuredImage: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=1200&fit=crop&q=80',
+    imageAlt: 'PureBorn baby essentials and organic bamboo products',
+    imageCaption: 'PureBorn eco-friendly essentials for gentle everyday care in the UAE.',
+    location: 'UAE-Wide',
+    ageGroup: 'Ages 0 to 4',
+    indoorOutdoor: 'Everyday Care',
+    budget: 'AED 45–120',
+    tags: ['Brands We Love', 'Eco Parenting', 'Baby Essentials', 'UAE Brands'],
+    quickFacts: {
+      location: 'Available across UAE (Spinneys, Waitrose, Amazon, PureBorn.com)',
+      bestFor: 'Babies and Toddlers with sensitive skin',
+      timeNeeded: 'Everyday Essentials',
+      budget: 'AED 45 - AED 120 per pack',
+      indoorOutdoor: 'Everyday Home & Travel',
+    },
+    mummaBeeTip: 'Subscribe directly online with code MUMMAPURE15 for recurring 15% discount and hassle-free monthly home delivery.',
+    seoTitle: 'PureBorn Nappies & Wipes Honest Mum Review | MummaBeeBlog',
+    seoDescription: 'Tested parent review of PureBorn organic bamboo nappies and wipes for UAE families.',
+  },
+  {
+    id: 'art-22',
+    slug: 'the-best-kids-sun-protection-and-swimwear-brands-in-the-uae',
+    category: 'brands-we-love',
+    subcategory: 'Kids Gear',
+    title: 'The 5 Best Kids UV Swimwear & Sun-Protection Brands in the UAE',
+    excerpt: 'From UPF50+ rash guards to mineral reef-safe sunscreens, here are the sun-protection brands our family genuinely swears by.',
+    answerSummary: 'For UAE beach days and pool afternoons, prioritize UPF50+ long-sleeve rash suits and mineral zinc sunscreens. Brands like Sunuva, Coega Sunwear, and Justhype provide top-tier UV durability.',
+    content: `
+      <h2>Living in the UAE Sun: Sun Protection First</h2>
+      <p>With year-round sunshine across Dubai and Abu Dhabi, reliable sun-protective gear is non-negotiable for family outdoor play.</p>
+      <h2>Top Vetted Brands</h2>
+      <ol>
+        <li><strong>Coega Sunwear:</strong> Durable UAE-designed UPF50+ swimsuits and pool shoes.</li>
+        <li><strong>Sunuva:</strong> Gorgeous, quick-drying resort wear with maximum sun block.</li>
+        <li><strong>Mustela Mineral Sun Lotion:</strong> Gentle mineral protection for sensitive young skin.</li>
+      </ol>
+    `,
+    author: 'Donne',
+    publishedAt: '2026-08-27',
+    lastUpdated: 'August 2026',
+    readTime: '5 min read',
+    featuredImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&fit=crop&q=80',
+    imageAlt: 'Kids swimming and playing safely in the sunshine',
+    imageCaption: 'UPF50+ UV swimwear is essential for worry-free pool and beach days.',
+    location: 'Dubai & Abu Dhabi',
+    ageGroup: 'All Ages',
+    indoorOutdoor: 'Outdoor Sun & Beach',
+    budget: 'AED 90–250',
+    tags: ['Brands We Love', 'Kids Swimwear', 'Summer Essentials', 'Family Gear'],
+    quickFacts: {
+      location: 'Dubai & Abu Dhabi',
+      bestFor: 'All kids and family beachgoers',
+      timeNeeded: 'Pool & Beach Days',
+      budget: 'AED 90 to AED 250',
+      indoorOutdoor: 'Outdoor',
+    },
+    mummaBeeTip: 'Always rinse chlorine out of UV swimwear immediately with cold fresh water to preserve the UPF fabric rating.',
+    seoTitle: '5 Best Kids UV Swimwear & Sunscreen Brands UAE | MummaBeeBlog',
+    seoDescription: 'Tested recommendations for the best UPF50+ kids swimwear and sun protection in Dubai and Abu Dhabi.',
+  },
+  {
+    id: 'art-23',
+    slug: 'our-weekend-morning-routine-finding-calm-before-the-desert-sun',
+    category: 'family-life',
+    subcategory: 'Home & Routines',
+    title: 'Our Weekend Morning Routine: Finding Calm Before the Desert Sun',
+    excerpt: 'How we structure slow weekend mornings with two young girls in the UAE before the midday heat sets in—from courtyard pancakes to shaded neighbourhood walks.',
+    answerSummary: 'Start slow with early wake-ups before 7:30 AM to take advantage of cooler morning air. A structured but unhurried family breakfast followed by 90 minutes of outdoor scooter time creates calm before the afternoon heat.',
+    content: `
+      <h2>The Beauty of Early UAE Weekend Mornings</h2>
+      <p>Weekend mornings in the UAE are magical if you catch them early. Before the midday sun climbs high, the air is calm, neighbourhoods are quiet, and the temperature is perfect for outdoor play.</p>
+      <h2>1. Early Garden Breakfast & Slow Coffee</h2>
+      <p>We make a point of not rushing breakfast on Saturdays. Freshly made banana oat pancakes, fresh fruit, and a warm cup of coffee while the girls play outside sets a peaceful tone for the day.</p>
+      <h2>2. The 8:00 AM Scooter Run</h2>
+      <p>Getting the girls moving before 9:30 AM is our golden rule. A quick scooter lap around the community park lets them burn off morning energy and breathe fresh air before we transition indoors.</p>
+      <h2>3. Transitioning to Indoor Calm</h2>
+      <p>By 10:30 AM, we head back inside for reading, craft stations, or baking before lunch. It avoids the peak sun hours while giving the family a full, satisfying morning.</p>
+    `,
+    author: 'Donne',
+    publishedAt: '2026-08-29',
+    lastUpdated: 'August 2026',
+    readTime: '4 min read',
+    featuredImage: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=1200&fit=crop&q=80',
+    imageAlt: 'Mother and daughters enjoying morning breakfast and relaxing time together',
+    imageCaption: 'Slow mornings with pancakes and coffee before our morning outdoor play.',
+    location: 'Dubai',
+    ageGroup: 'All Ages',
+    indoorOutdoor: 'Home & Community',
+    budget: 'Free / Everyday',
+    tags: ['Family Life', 'Mum Routines', 'Weekend Calm', 'UAE Parenting'],
+    quickFacts: {
+      location: 'Home & Community Parks',
+      bestFor: 'Families with toddlers and young children',
+      timeNeeded: '7:00 AM – 11:00 AM',
+      budget: 'Free',
+      indoorOutdoor: 'Morning Outdoor / Midday Indoor',
+    },
+    mummaBeeTip: 'Prep pancake batter the night before so you can spend your morning sitting with the kids rather than standing over the stove.',
+    seoTitle: 'UAE Family Weekend Morning Routine | MummaBeeBlog',
+    seoDescription: 'Discover how we structure slow, peaceful weekend mornings with kids in Dubai before the desert heat.',
+  },
+  {
+    id: 'art-24',
+    slug: 'raising-sibling-bonds-in-the-uae-what-having-two-girls-has-taught-us',
+    category: 'family-life',
+    subcategory: 'Growing Up',
+    title: 'Raising Sibling Bonds in the UAE: What Having Two Girls Has Taught Us',
+    excerpt: 'From navigating shared bedrooms and toy disputes to watching their desert friendship bloom—our honest parent reflections on raising two close sisters in the Emirates.',
+    answerSummary: 'Foster strong sibling bonds by creating shared weekend adventures, giving each child dedicated 1-on-1 parent time during the week, and encouraging collaborative play projects over competitive activities.',
+    content: `
+      <h2>The Joys and Realities of Raising Two Sisters</h2>
+      <p>Watching our daughters grow up together in the UAE is one of our greatest joys. Being away from extended family means their bond as sisters is doubly important—they are each other’s best friends, travel buddies, and confidantes.</p>
+      <h2>1. Dedicated One-on-One Parent Dates</h2>
+      <p>Even though the girls do almost everything together, scheduling intentional 30-minute one-on-one dates (like a babyccino café run with mum or a bike ride with dad) ensures each daughter feels uniquely heard.</p>
+      <h2>2. Encouraging Collaborative Play</h2>
+      <p>Instead of games with winners and losers, we focus on joint creative missions: building massive sofa forts, sensory water trays, and collaborating on holiday scrapbooks.</p>
+      <h2>3. Giving Each Sister Personal Space</h2>
+      <p>In busy expat lives, even close siblings need independent quiet time. Having separate reading nooks helps prevent afternoon bickering.</p>
+    `,
+    author: 'Donne',
+    publishedAt: '2026-08-27',
+    lastUpdated: 'August 2026',
+    readTime: '5 min read',
+    featuredImage: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1200&fit=crop&q=80',
+    imageAlt: 'Two young sisters playing and enjoying time together in the park',
+    imageCaption: 'Fostering deep sibling bonds through everyday shared adventures.',
+    location: 'Dubai & Abu Dhabi',
+    ageGroup: 'Toddlers & Primary',
+    indoorOutdoor: 'Everyday Parenting',
+    budget: 'Priceless',
+    tags: ['Family Life', 'Growing Up', 'Sibling Bonds', 'Parenting Advice'],
+    quickFacts: {
+      location: 'UAE Living',
+      bestFor: 'Parents with multiple siblings',
+      timeNeeded: 'Everyday practice',
+      budget: 'Free',
+      indoorOutdoor: 'Home & Travel',
+    },
+    mummaBeeTip: 'Praise teamwork whenever you see your children helping each other without being prompted—it reinforces positive sibling habits much faster than lecturing.',
+    seoTitle: 'Raising Sibling Bonds in the UAE | MummaBeeBlog',
+    seoDescription: 'Honest reflections and practical parenting advice on raising close sisters and siblings in the UAE.',
+  },
+  {
+    id: 'art-25',
+    slug: 'the-expat-mum-survival-guide-settling-in-and-beating-homesickness',
+    category: 'family-life',
+    subcategory: 'Mum Notes',
+    title: 'The Expat Mum Survival Guide: Settling In and Beating Homesickness',
+    excerpt: 'Moving to the UAE with a young family brings exciting new horizons, but homesickness is real. Here are 6 grounded strategies that helped our family thrive.',
+    answerSummary: 'Overcome expat homesickness by establishing familiar home cooking routines, joining active local school mum groups, celebrating both home-country and UAE cultural holidays, and planning regular video calls with grandparents.',
+    content: `
+      <h2>When the Excitement Settles: Navigating Expat Life</h2>
+      <p>The initial thrill of moving to the Emirates—the sunshine, the palm trees, the safety—can eventually give way to moments of missing familiar home routines and grandparents. Here is what helped us turn the UAE into our true family home.</p>
+      <h2>1. Building Your Local Mum Village</h2>
+      <p>Don’t hesitate to strike up conversations at school pickups, toddler playgroups, and community parks. Other expat mums are in the exact same boat and eager to connect.</p>
+      <h2>2. Recreating Comfort Food Traditions</h2>
+      <p>Find local specialty grocery aisles that stock your comfort childhood foods. Cooking beloved family recipes on Friday evenings brings an instant feeling of home.</p>
+      <h2>3. Establishing Predictable Family Traditions</h2>
+      <p>Whether it’s Friday movie night with homemade popcorn or Sunday morning desert bike rides, predictable rituals give kids a strong sense of stability.</p>
+    `,
+    author: 'Donne',
+    publishedAt: '2026-08-25',
+    lastUpdated: 'August 2026',
+    readTime: '6 min read',
+    featuredImage: 'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=1200&fit=crop&q=80',
+    imageAlt: 'Expat family enjoying cozy living room and togetherness',
+    imageCaption: 'Creating familiar family traditions is the secret to thriving as an expat mum.',
+    location: 'UAE-Wide',
+    ageGroup: 'All Families',
+    indoorOutdoor: 'Home & Community',
+    budget: 'Everyday Living',
+    tags: ['Family Life', 'Mum Notes', 'Expat Parenting', 'UAE Life'],
+    quickFacts: {
+      location: 'Dubai & Abu Dhabi',
+      bestFor: 'New and seasoned expat parents',
+      timeNeeded: 'Everyday',
+      budget: 'Free',
+      indoorOutdoor: 'Home & Community',
+    },
+    mummaBeeTip: 'Set up a shared digital family photo album with grandparents back home so they can see daily milestones in real time.',
+    seoTitle: 'Expat Mum Survival Guide: Settling in the UAE | MummaBeeBlog',
+    seoDescription: 'Practical advice for expat mums settling into family life in Dubai and Abu Dhabi, building community and thriving.',
+  },
 ];
 
 export function getAllArticles(): ArticleItem[] {

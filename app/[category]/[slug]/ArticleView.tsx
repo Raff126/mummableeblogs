@@ -22,41 +22,34 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
   useEffect(() => {
     if (!slug) return;
 
-    const findBestMatch = (list: ArticleItem[]) => {
-      // Exact match by slug or id
-      let match = list.find((a) => a.slug === slug || a.id === slug);
-      if (match) return match;
+    const normalizedSlug = decodeURIComponent(slug).toLowerCase().trim().replace(/\/$/, '');
 
-      // Partial/fuzzy match by slug words or category
-      const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9]/g, ' ');
-      const words = cleanSlug.split(' ').filter((w) => w.length > 3);
-      
-      if (words.length > 0) {
-        match = list.find((a) => {
-          const aSlug = a.slug.toLowerCase().replace(/[^a-z0-9]/g, ' ');
-          const matchingWords = words.filter((w) => aSlug.includes(w));
-          return matchingWords.length >= Math.min(2, words.length);
-        });
-        if (match) return match;
-      }
-
-      // Fallback by category
-      if (categorySlug) {
-        const inCat = list.filter((a) => a.category === categorySlug && !a.isDraft);
-        if (inCat.length > 0) return inCat[0];
-      }
-
-      return null;
+    const findArticle = (list: ArticleItem[]) => {
+      return list.find(
+        (a) =>
+          a.slug?.toLowerCase().trim().replace(/\/$/, '') === normalizedSlug ||
+          a.id?.toLowerCase().trim() === normalizedSlug
+      );
     };
 
-    // 1. Try local store first (includes newly published articles from admin panel)
-    const localArticles = getInitialArticles();
-    let found = findBestMatch(localArticles);
-
-    // 2. Fallback to initialArticle or static dataset
-    if (!found) {
-      found = initialArticle || getArticleBySlug(slug) || findBestMatch(getAllArticles());
+    // 1. Check initialArticle if already matching
+    if (initialArticle && (
+      initialArticle.slug?.toLowerCase().trim().replace(/\/$/, '') === normalizedSlug ||
+      initialArticle.id?.toLowerCase().trim() === normalizedSlug
+    )) {
+      setArticle(initialArticle);
+      const all = getAllArticles();
+      const related = all
+        .filter((a) => a.category === initialArticle.category && a.slug !== initialArticle.slug && !a.isDraft)
+        .slice(0, 4);
+      setRelatedArticles(related);
+      setIsLoading(false);
+      return;
     }
+
+    // 2. Try local store and static data
+    const localArticles = getInitialArticles();
+    let found = findArticle(localArticles) || findArticle(getAllArticles());
 
     if (found) {
       setArticle(found);
@@ -71,7 +64,7 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
         .then((res) => res.json())
         .then((data: ArticleItem[]) => {
           if (Array.isArray(data)) {
-            const apiFound = findBestMatch(data);
+            const apiFound = findArticle(data);
             if (apiFound) {
               setArticle(apiFound);
               const related = data
@@ -246,6 +239,12 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
                 src={article.featuredImage}
                 alt={article.imageAlt || article.title}
                 fetchPriority="high"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (!target.src.includes('358792494_661391199240576_3424351230899219709_n.jpg')) {
+                    target.src = '/images/358792494_661391199240576_3424351230899219709_n.jpg';
+                  }
+                }}
                 className="w-full h-80 sm:h-[420px] object-cover"
               />
             </div>

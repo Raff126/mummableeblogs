@@ -10,12 +10,10 @@ export default function RecentBlogsSection() {
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    // 1. Load from local store immediately (includes any articles added in Admin Panel)
+  const refreshArticles = () => {
     const local = getInitialArticles();
     const published = (local.length > 0 ? local : getAllArticles()).filter((a) => !a.isDraft);
 
-    // Sort newest first
     const sorted = [...published].sort((a, b) => {
       const timeA = new Date(a.publishedAt).getTime() || 0;
       const timeB = new Date(b.publishedAt).getTime() || 0;
@@ -26,8 +24,7 @@ export default function RecentBlogsSection() {
     setArticles(sorted);
     setIsLoading(false);
 
-    // 2. Refresh from server API in background
-    fetch('/api/articles')
+    fetch(`/api/articles?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((apiArticles: ArticleItem[]) => {
         if (Array.isArray(apiArticles) && apiArticles.length > 0) {
@@ -41,7 +38,25 @@ export default function RecentBlogsSection() {
           setArticles(apiSorted);
         }
       })
-      .catch((err) => console.error('Error refreshing articles:', err));
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshArticles();
+
+    const handleUpdate = () => {
+      refreshArticles();
+    };
+
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
   }, []);
 
   // Limit visible articles to 4 (exactly 1 row of 4 on desktop)
