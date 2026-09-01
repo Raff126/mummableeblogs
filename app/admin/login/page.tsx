@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
             <input
               type="email"
               required
-              placeholder="admin@mummamabeeblogs.com"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-medium text-[#332D2F] transition-all bg-white"
