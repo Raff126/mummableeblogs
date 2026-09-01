@@ -621,6 +621,11 @@ export function saveCategories(cats: Record<string, CategoryInfo>): void {
   }
 }
 
+export const ADMIN_CREDENTIALS = {
+  email: 'admin@mummamabeeblogs.com',
+  password: 'Admin123',
+};
+
 export function isAuthenticated(): boolean {
   if (typeof window === 'undefined') return false;
   return localStorage.getItem(STORAGE_KEYS.AUTH) === 'true';
@@ -630,8 +635,24 @@ export function setAuthenticated(status: boolean): void {
   if (typeof window !== 'undefined') {
     if (status) {
       safeSetLocalStorage(STORAGE_KEYS.AUTH, 'true');
+      window.dispatchEvent(new CustomEvent('mummabee_auth_changed', { detail: { authenticated: true } }));
     } else {
       localStorage.removeItem(STORAGE_KEYS.AUTH);
+      window.dispatchEvent(new CustomEvent('mummabee_auth_changed', { detail: { authenticated: false } }));
     }
   }
+}
+
+export function logout(): void {
+  setAuthenticated(false);
+}
+
+export function validateAdminCredentials(emailInput: string, passwordInput: string): boolean {
+  const cleanEmail = emailInput.trim().toLowerCase();
+  const validEmails = [
+    'admin@mummamabeeblogs.com',
+    'admin@mummabeeblog.com',
+    'donne@mummabeeblog.com',
+  ];
+  return validEmails.includes(cleanEmail) && passwordInput === ADMIN_CREDENTIALS.password;
 }

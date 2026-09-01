@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { isAuthenticated, logout } from '../../data/store';
 
 const ADMIN_NAV = [
   { label: 'Dashboard', path: '/admin', icon: '📊' },
@@ -23,7 +24,43 @@ const ADMIN_NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  const isLoginPage = pathname === '/admin/login' || pathname === '/admin/login/';
+
+  useEffect(() => {
+    if (!isLoginPage) {
+      if (!isAuthenticated()) {
+        router.push('/admin/login');
+      } else {
+        setIsCheckingAuth(false);
+      }
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [pathname, isLoginPage, router]);
+
+  const handleLogout = () => {
+    logout();
+    router.push('/admin/login');
+  };
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-[#F8EDEF] flex items-center justify-center font-sans text-xs text-[#683846]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-[#B75B70] border-t-transparent rounded-full animate-spin"></div>
+          <span className="font-semibold">Verifying Admin Access...</span>
+        </div>
+      </div>
+    );
+  }
 
   const isCurrentActive = (itemPath: string) => {
     if (!pathname) return false;
@@ -102,6 +139,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span>🌐</span>
             <span>View Live Website</span>
           </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl text-red-600 hover:bg-red-50 font-sans text-xs font-bold transition-all"
+          >
+            <span>🚪</span>
+            <span>Log Out</span>
+          </button>
         </div>
       </aside>
 
