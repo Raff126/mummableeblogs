@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getArticleBySlug, getAllArticles, ArticleItem } from '../../../data/articles';
-import { getInitialArticles, isGoodToKnowVisibleForArticle } from '../../../data/store';
+import { getInitialArticles, getDeletedArticleIds, isGoodToKnowVisibleForArticle } from '../../../data/store';
 import { CATEGORIES } from '../../../data/categories';
 import GuideCard from '../../../components/GuideCard';
 import NewsletterBand from '../../../components/NewsletterBand';
@@ -25,18 +25,34 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
     if (!slug) return;
 
     const normalizedSlug = decodeURIComponent(slug).toLowerCase().trim().replace(/\/$/, '');
+    const deleted = getDeletedArticleIds();
+
+    if (
+      deleted.has(slug) ||
+      deleted.has(normalizedSlug) ||
+      (initialArticle && (deleted.has(initialArticle.id) || (initialArticle.slug && deleted.has(initialArticle.slug))))
+    ) {
+      setArticle(null);
+      setRelatedArticles([]);
+      setIsLoading(false);
+      return;
+    }
 
     const findArticle = (list: ArticleItem[]) => {
       return (
         list.find(
           (a) =>
-            a.slug?.toLowerCase().trim().replace(/^\//, '').replace(/\/$/, '') === normalizedSlug ||
-            a.id?.toLowerCase().trim() === normalizedSlug
+            !deleted.has(a.id) &&
+            (!a.slug || !deleted.has(a.slug)) &&
+            (a.slug?.toLowerCase().trim().replace(/^\//, '').replace(/\/$/, '') === normalizedSlug ||
+              a.id?.toLowerCase().trim() === normalizedSlug)
         ) ||
         list.find(
           (a) =>
-            encodeURIComponent(a.slug || '').toLowerCase() === normalizedSlug ||
-            a.slug?.toLowerCase() === slug.toLowerCase()
+            !deleted.has(a.id) &&
+            (!a.slug || !deleted.has(a.slug)) &&
+            (encodeURIComponent(a.slug || '').toLowerCase() === normalizedSlug ||
+              a.slug?.toLowerCase() === slug.toLowerCase())
         )
       );
     };
@@ -49,22 +65,22 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       setArticle(foundInLocal);
       const all = localArticles.length > 0 ? localArticles : getAllArticles();
       const related = all
-        .filter((a) => a.category === foundInLocal.category && a.slug !== foundInLocal.slug && !a.isDraft)
+        .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === foundInLocal.category && a.slug !== foundInLocal.slug && !a.isDraft)
         .slice(0, 4);
       setRelatedArticles(related);
       setIsLoading(false);
       return;
     }
 
-    // 2. Check initialArticle if already matching
-    if (initialArticle && (
+    // 2. Check initialArticle if already matching and not deleted
+    if (initialArticle && !deleted.has(initialArticle.id) && (!initialArticle.slug || !deleted.has(initialArticle.slug)) && (
       initialArticle.slug?.toLowerCase().trim().replace(/\/$/, '') === normalizedSlug ||
       initialArticle.id?.toLowerCase().trim() === normalizedSlug
     )) {
       setArticle(initialArticle);
       const all = getAllArticles();
       const related = all
-        .filter((a) => a.category === initialArticle.category && a.slug !== initialArticle.slug && !a.isDraft)
+        .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === initialArticle.category && a.slug !== initialArticle.slug && !a.isDraft)
         .slice(0, 4);
       setRelatedArticles(related);
       setIsLoading(false);
@@ -77,7 +93,7 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       setArticle(foundInStatic);
       const all = getAllArticles();
       const related = all
-        .filter((a) => a.category === foundInStatic.category && a.slug !== foundInStatic.slug && !a.isDraft)
+        .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === foundInStatic.category && a.slug !== foundInStatic.slug && !a.isDraft)
         .slice(0, 4);
       setRelatedArticles(related);
       setIsLoading(false);
@@ -89,13 +105,16 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       .then((res) => res.json())
       .then((data: ArticleItem[]) => {
         if (Array.isArray(data)) {
-          const apiFound = findArticle(data);
+          const validData = data.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)));
+          const apiFound = findArticle(validData);
           if (apiFound) {
             setArticle(apiFound);
-            const related = data
+            const related = validData
               .filter((a) => a.category === apiFound.category && a.slug !== apiFound.slug && !a.isDraft)
               .slice(0, 4);
             setRelatedArticles(related);
+          } else {
+            setArticle(null);
           }
         }
       })

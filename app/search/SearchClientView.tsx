@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArticleItem, getAllArticles } from '../../data/articles';
 import { CATEGORIES } from '../../data/categories';
-import { getInitialArticles } from '../../data/store';
+import { getInitialArticles, getDeletedArticleIds } from '../../data/store';
 import GuideCard from '../../components/GuideCard';
 import NewsletterBand from '../../components/NewsletterBand';
 
@@ -69,9 +69,10 @@ export default function SearchClientView() {
 
   // Load articles from localStorage and API
   useEffect(() => {
+    const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
     const all = local.length > 0 ? local : getAllArticles();
-    setArticles(all.filter((a) => !a.isDraft));
+    setArticles(all.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && !a.isDraft));
     setIsLoading(false);
 
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -80,7 +81,22 @@ export default function SearchClientView() {
       .then((res) => res.ok ? res.json() : null)
       .then((apiArticles: ArticleItem[]) => {
         if (Array.isArray(apiArticles) && apiArticles.length > 0) {
-          setArticles(apiArticles.filter((a) => !a.isDraft));
+          const currentDeleted = getDeletedArticleIds();
+          const currentLocal = getInitialArticles();
+          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
+
+          const merged = [...currentLocal];
+          for (const sArt of apiArticles) {
+            if (currentDeleted.has(sArt.id) || (sArt.slug && currentDeleted.has(sArt.slug))) {
+              continue;
+            }
+            if (!localMap.has(sArt.id)) {
+              merged.push(sArt);
+              localMap.set(sArt.id, sArt);
+            }
+          }
+
+          setArticles(merged.filter((a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && !a.isDraft));
         }
       })
       .catch((err) => console.error('Error loading search articles:', err));

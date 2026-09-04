@@ -8,6 +8,7 @@ import {
   saveArticles,
   getInitialMedia,
   saveMedia,
+  getDeletedArticleIds,
   setGoodToKnowVisibility,
   isGoodToKnowVisibleForArticle,
   Article,
@@ -60,9 +61,14 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
 
   useEffect(() => {
     setMediaList(getInitialMedia());
+    const deleted = getDeletedArticleIds();
+    if (deleted.has(articleId)) {
+      setArticle(null);
+      return;
+    }
     const allArticles = getInitialArticles();
     const found = allArticles.find((a) => a.id === articleId || a.slug === articleId) ||
-                  getAllArticles().find((a) => a.id === articleId || a.slug === articleId);
+                  getAllArticles().filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))).find((a) => a.id === articleId || a.slug === articleId);
     if (found) {
       setArticle(found);
       setTitle(found.title);

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CATEGORIES, CategoryInfo } from '../../data/categories';
 import { ArticleItem, getAllArticles } from '../../data/articles';
-import { getInitialArticles, getInitialCategories } from '../../data/store';
+import { getInitialArticles, getInitialCategories, getDeletedArticleIds } from '../../data/store';
 import GuideCard from '../../components/GuideCard';
 import DiscountCodesSection from '../../components/DiscountCodesSection';
 import NewsletterBand from '../../components/NewsletterBand';
@@ -41,11 +41,12 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
       setCategoryInfo(cats[categorySlug]);
     }
 
+    const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
     const all = local.length > 0 ? local : getAllArticles();
     const expatSlugs = ['the-expat-edit', 'expat-edit'];
     const matchCat = (artCat: string) => expatSlugs.includes(categorySlug) ? expatSlugs.includes(artCat) : artCat === categorySlug;
-    const filtered = all.filter((a) => matchCat(a.category) && !a.isDraft);
+    const filtered = all.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && matchCat(a.category) && !a.isDraft);
 
     const sorted = [...filtered].sort((a, b) => {
       const timeA = new Date(a.publishedAt).getTime() || 0;
@@ -65,7 +66,27 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
       .then((res) => res.ok ? res.json() : null)
       .then((apiArticles: ArticleItem[]) => {
         if (Array.isArray(apiArticles)) {
-          const apiFiltered = apiArticles.filter((a) => matchCat(a.category) && !a.isDraft);
+          const currentDeleted = getDeletedArticleIds();
+          const currentLocal = getInitialArticles();
+          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
+          
+          const merged = [...currentLocal];
+          for (const sArt of apiArticles) {
+            if (currentDeleted.has(sArt.id) || (sArt.slug && currentDeleted.has(sArt.slug))) {
+              continue;
+            }
+            if (!localMap.has(sArt.id)) {
+              merged.push(sArt);
+              localMap.set(sArt.id, sArt);
+            }
+          }
+
+          const apiFiltered = merged.filter((a) => 
+            !currentDeleted.has(a.id) && 
+            (!a.slug || !currentDeleted.has(a.slug)) && 
+            matchCat(a.category) && 
+            !a.isDraft
+          );
           const apiSorted = [...apiFiltered].sort((a, b) => {
             const timeA = new Date(a.publishedAt).getTime() || 0;
             const timeB = new Date(b.publishedAt).getTime() || 0;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArticleItem, getAllArticles } from '../data/articles';
-import { getInitialArticles } from '../data/store';
+import { getInitialArticles, getDeletedArticleIds } from '../data/store';
 import GuideCard from './GuideCard';
 
 export default function RecentBlogsSection() {
@@ -11,8 +11,11 @@ export default function RecentBlogsSection() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshArticles = () => {
+    const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
-    const published = (local.length > 0 ? local : getAllArticles()).filter((a) => !a.isDraft);
+    const published = (local.length > 0 ? local : getAllArticles()).filter(
+      (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && !a.isDraft
+    );
 
     const sorted = [...published].sort((a, b) => {
       const timeA = new Date(a.publishedAt).getTime() || 0;
@@ -30,7 +33,24 @@ export default function RecentBlogsSection() {
       .then((res) => res.ok ? res.json() : null)
       .then((apiArticles: ArticleItem[]) => {
         if (Array.isArray(apiArticles) && apiArticles.length > 0) {
-          const apiPublished = apiArticles.filter((a) => !a.isDraft);
+          const currentDeleted = getDeletedArticleIds();
+          const currentLocal = getInitialArticles();
+          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
+
+          const merged = [...currentLocal];
+          for (const sArt of apiArticles) {
+            if (currentDeleted.has(sArt.id) || (sArt.slug && currentDeleted.has(sArt.slug))) {
+              continue;
+            }
+            if (!localMap.has(sArt.id)) {
+              merged.push(sArt);
+              localMap.set(sArt.id, sArt);
+            }
+          }
+
+          const apiPublished = merged.filter(
+            (a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && !a.isDraft
+          );
           const apiSorted = [...apiPublished].sort((a, b) => {
             const timeA = new Date(a.publishedAt).getTime() || 0;
             const timeB = new Date(b.publishedAt).getTime() || 0;

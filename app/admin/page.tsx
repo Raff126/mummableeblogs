@@ -5,6 +5,8 @@ import Link from 'next/link';
 import {
   getInitialArticles,
   saveArticles,
+  deleteArticle,
+  getDeletedArticleIds,
   Article,
 } from '../../data/store';
 import { CATEGORIES } from '../../data/categories';
@@ -15,14 +17,33 @@ export default function AdminDashboardPage() {
   const [message, setMessage] = useState('');
 
   const loadArticles = () => {
-    setArticles(getInitialArticles());
+    const local = getInitialArticles();
+    setArticles(local);
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
     fetch(endpoint, { cache: 'no-store' })
       .then((res) => res.ok ? res.json() : null)
       .then((data: Article[]) => {
         if (Array.isArray(data)) {
-          setArticles(data);
+          const deleted = getDeletedArticleIds();
+          const currentLocal = getInitialArticles();
+          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
+
+          const merged = [...currentLocal];
+          for (const sArt of data) {
+            if (deleted.has(sArt.id) || (sArt.slug && deleted.has(sArt.slug))) {
+              continue;
+            }
+            if (!localMap.has(sArt.id)) {
+              merged.push(sArt);
+              localMap.set(sArt.id, sArt);
+            }
+          }
+
+          const filtered = merged.filter(
+            (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))
+          );
+          setArticles(filtered);
         }
       })
       .catch(() => {});
@@ -54,11 +75,11 @@ export default function AdminDashboardPage() {
     setTimeout(() => setMessage(''), 3000);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this article?')) {
-      const updated = articles.filter((a) => a.id !== id);
-      setArticles(updated);
-      saveArticles(updated);
+      const target = articles.find((a) => a.id === id);
+      await deleteArticle(id, target?.slug);
+      setArticles(getInitialArticles());
       setMessage('Article deleted successfully.');
       setTimeout(() => setMessage(''), 3000);
     }

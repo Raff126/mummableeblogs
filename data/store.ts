@@ -421,11 +421,15 @@ export function getInitialArticles(): Article[] {
 
 export async function deleteArticle(id: string, slug?: string): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  markArticleDeleted(id);
-  if (slug) markArticleDeleted(slug);
+  const currentArticles = getInitialArticles();
+  const target = currentArticles.find((a) => a.id === id || (slug && a.slug === slug));
+  const finalSlug = slug || target?.slug;
 
-  const current = getInitialArticles().filter(
-    (a) => a.id !== id && (!slug || a.slug !== slug)
+  markArticleDeleted(id);
+  if (finalSlug) markArticleDeleted(finalSlug);
+
+  const current = currentArticles.filter(
+    (a) => a.id !== id && (!finalSlug || a.slug !== finalSlug)
   );
   return saveArticles(current);
 }
