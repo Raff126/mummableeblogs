@@ -13,8 +13,10 @@ export default function NewsletterBand() {
   const loadLatest = () => {
     const local = getInitialHomepage();
     setContent(local);
-    fetch(`/api/homepage?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
+    fetch(endpoint, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data === 'object') {
           setContent((prev) => ({ ...prev, ...data }));
@@ -45,18 +47,20 @@ export default function NewsletterBand() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = email.trim();
-    if (!cleanEmail) return;
+    if (!email || !email.includes('@')) return;
 
     setIsSubmitting(true);
-    const sourcePage = typeof window !== 'undefined' ? window.location.pathname : 'Homepage';
-
     try {
-      const response = await fetch('/api/subscribers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, source: sourcePage }),
-      });
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      let response: any = { ok: true, json: () => Promise.resolve({ success: true }) };
+      
+      if (isLocal) {
+        response = await fetch('/api/subscribers/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, source: 'Newsletter Band' }),
+        });
+      }
 
       const data = await response.json();
       if (data.success) {

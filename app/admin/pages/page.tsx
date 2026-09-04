@@ -6,11 +6,14 @@ const PAGES = [
   { name: 'Homepage (Family Guide Hub)', editPath: '/admin/homepage/', status: 'Live', url: '/' },
   { name: 'About Donne & Our Story', editPath: '/admin/about/', status: 'Live', url: '/about/' },
   { name: 'Work With Us (Partnerships & Media Kit)', editPath: '/admin/work-with-us/', status: 'Live', url: '/work-with-us/' },
+  { name: 'The Expat Edit (Curated UAE Essentials)', editPath: '/admin/categories/?edit=the-expat-edit', status: 'Live', url: '/the-expat-edit/' },
   { name: 'UAE With Kids (Activities & Days Out)', editPath: '/admin/categories/?edit=uae-with-kids', status: 'Live', url: '/uae-with-kids/' },
+  { name: 'Family Life (Parenting & Stories)', editPath: '/admin/categories/?edit=family-life', status: 'Live', url: '/family-life/' },
   { name: 'Food & Dining (Family-Friendly Places)', editPath: '/admin/categories/?edit=food', status: 'Live', url: '/food/' },
   { name: 'Family Travel (Trips & Staycations)', editPath: '/admin/categories/?edit=travel', status: 'Live', url: '/travel/' },
-  { name: 'Family Life (Parenting & Stories)', editPath: '/admin/categories/?edit=family-life', status: 'Live', url: '/family-life/' },
   { name: 'School & Activities (Learning & Prep)', editPath: '/admin/categories/?edit=school-and-activities', status: 'Live', url: '/school-and-activities/' },
+  { name: 'Brands We Love (Tested Gear & Essentials)', editPath: '/admin/categories/?edit=brands-we-love', status: 'Live', url: '/brands-we-love/' },
+  { name: 'UAE Deals (Discount Codes & Offers)', editPath: '/admin/deals/', status: 'Live', url: '/uae-deals/' },
 ];
 
 export default function AdminPagesPage() {

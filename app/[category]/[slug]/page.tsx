@@ -9,6 +9,8 @@ interface PageProps {
   };
 }
 
+export const dynamicParams = true;
+
 export function generateStaticParams() {
   const articles = getAllArticles().filter((a) => a.slug && a.category);
   const params: { category: string; slug: string }[] = [];

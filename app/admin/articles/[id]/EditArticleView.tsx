@@ -8,12 +8,16 @@ import {
   saveArticles,
   getInitialMedia,
   saveMedia,
+  setGoodToKnowVisibility,
+  isGoodToKnowVisibleForArticle,
   Article,
   MediaItem,
 } from '../../../../data/store';
+import { getAllArticles, ArticleItem } from '../../../../data/articles';
 import { CATEGORIES } from '../../../../data/categories';
 import { compressImage } from '../../../../utils/imageCompressor';
 import ImageInputWithPaste from '../../../../components/admin/ImageInputWithPaste';
+import RichContentEditor from '../../../../components/admin/RichContentEditor';
 
 const IMAGE_PRESETS = [
   { label: 'Dubai Activities', url: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&fit=crop&q=80' },
@@ -43,6 +47,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
   const [factTimeNeeded, setFactTimeNeeded] = useState('');
   const [tags, setTags] = useState('');
   const [isDraft, setIsDraft] = useState(false);
+  const [goodToKnowEnabled, setGoodToKnowEnabled] = useState(true);
 
   // Media Library state
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
@@ -56,7 +61,8 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
   useEffect(() => {
     setMediaList(getInitialMedia());
     const allArticles = getInitialArticles();
-    const found = allArticles.find((a) => a.id === articleId);
+    const found = allArticles.find((a) => a.id === articleId || a.slug === articleId) ||
+                  getAllArticles().find((a) => a.id === articleId || a.slug === articleId);
     if (found) {
       setArticle(found);
       setTitle(found.title);
@@ -75,10 +81,11 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
       setFactTimeNeeded(found.quickFacts?.timeNeeded || '');
       setTags((found.tags || []).join(', '));
       setIsDraft(!!found.isDraft);
+      setGoodToKnowEnabled(isGoodToKnowVisibleForArticle(found));
     }
   }, [articleId]);
 
-  // Handle direct file upload from computer with client-side compression
+  // Handle direct file upload from computer with client-side compression & server upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -93,17 +100,37 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
 
     try {
       const compressedDataUrl = await compressImage(file, 1200, 1200, 0.82);
-      setFeaturedImage(compressedDataUrl);
+      
+      // Upload to server to get permanent /uploads/ file URL
+      let finalUrl = compressedDataUrl;
+      try {
+        const uploadRes = await fetch('/api/upload/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: compressedDataUrl,
+            filename: file.name,
+          }),
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          if (data.url) finalUrl = data.url;
+        }
+      } catch (uploadErr) {
+        console.warn('Server upload fallback:', uploadErr);
+      }
+
+      setFeaturedImage(finalUrl);
 
       // Store in Media Library for reuse
       const newMedia: MediaItem = {
         id: `med-${Date.now()}`,
-        url: compressedDataUrl,
+        url: finalUrl,
         filename: file.name,
         uploadDate: new Date().toISOString().split('T')[0],
         dimensions: '1200x800',
       };
-      const updatedMedia = [newMedia, ...mediaList];
+      const updatedMedia = [newMedia, ...mediaList.filter(m => m.url !== finalUrl)].slice(0, 30);
       setMediaList(updatedMedia);
       saveMedia(updatedMedia);
 
@@ -138,37 +165,75 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
     setError('');
 
     try {
-      const allArticles = getInitialArticles();
-      const updated = allArticles.map((a) => {
-        if (a.id === articleId) {
-          return {
-            ...a,
-            title,
-            slug: slug.trim() || a.slug,
-            category,
-            excerpt,
-            content,
-            featuredImage: featuredImage || a.featuredImage,
-            imageCaption,
-            readTime: readTime || '4 min read',
-            answerSummary,
-            mummaBeeTip,
-            quickFacts: {
-              location: factLocation,
-              bestFor: factBestFor,
-              budget: factBudget,
-              timeNeeded: factTimeNeeded,
-            },
-            location: factLocation,
-            tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-            isDraft: draftStatus,
-          };
+      let allArticles = getInitialArticles();
+      const isLocal = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1'
+      );
+      const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
+      try {
+        const apiRes = await fetch(endpoint, { cache: 'no-store' });
+        if (apiRes.ok) {
+          const list = await apiRes.json();
+          if (Array.isArray(list) && list.length > 0) {
+            allArticles = list;
+          }
         }
-        return a;
-      });
+      } catch (fetchErr) {
+        // Fallback to allArticles
+      }
 
+      let updated: ArticleItem[];
+      const articleIndex = allArticles.findIndex(
+        (a) => a.id === articleId || a.slug === articleId || (article && a.id === article.id) || (slug && a.slug === slug)
+      );
+
+      const targetArticle = articleIndex !== -1 ? allArticles[articleIndex] : (article || getAllArticles().find(a => a.id === articleId || a.slug === articleId));
+
+      const updatedArticle: ArticleItem = {
+        ...(targetArticle || {}),
+        id: targetArticle?.id || articleId,
+        author: targetArticle?.author || 'Donne',
+        publishedAt: targetArticle?.publishedAt || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        title: title.trim(),
+        slug: slug.trim() || targetArticle?.slug || articleId,
+        category,
+        excerpt: excerpt.trim(),
+        content: content.trim() || `<p>${excerpt.trim()}</p>`,
+        featuredImage: featuredImage || targetArticle?.featuredImage || '',
+        imageAlt: targetArticle?.imageAlt || title.trim(),
+        imageCaption: imageCaption.trim(),
+        readTime: readTime || '4 min read',
+        answerSummary: (answerSummary || excerpt).trim(),
+        mummaBeeTip: mummaBeeTip.trim(),
+        quickFacts: {
+          location: factLocation.trim(),
+          bestFor: factBestFor.trim(),
+          budget: factBudget.trim(),
+          timeNeeded: factTimeNeeded.trim(),
+        },
+        location: factLocation.trim(),
+        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        isDraft: draftStatus,
+        goodToKnowEnabled: Boolean(goodToKnowEnabled),
+        showGoodToKnow: Boolean(goodToKnowEnabled),
+      };
+
+      if (articleIndex !== -1) {
+        updated = allArticles.map((a, idx) => (idx === articleIndex ? updatedArticle : a));
+      } else {
+        updated = [updatedArticle, ...allArticles];
+      }
+
+      // 1. Save to Good to Know visibility map for immediate global effect
+      setGoodToKnowVisibility(articleId, Boolean(goodToKnowEnabled));
+      if (slug.trim()) {
+        setGoodToKnowVisibility(slug.trim(), Boolean(goodToKnowEnabled));
+      }
+
+      // 2. Save updated articles list
       await saveArticles(updated);
-      setMessage('Article updated successfully!');
+      setMessage('Article updated successfully! Live on website.');
       setTimeout(() => {
         router.push('/admin/articles');
       }, 1000);
@@ -256,7 +321,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-semibold text-[#332D2F] bg-white"
               >
-                {Object.entries(CATEGORIES).map(([catSlug, info]) => (
+                {Object.entries(CATEGORIES).filter(([catSlug]) => catSlug !== 'expat-edit').map(([catSlug, info]) => (
                   <option key={catSlug} value={catSlug}>{info.name}</option>
                 ))}
               </select>
@@ -314,13 +379,29 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#332D2F] uppercase tracking-wider mb-1">
-              Short Excerpt / Summary *
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-[#332D2F] uppercase tracking-wider">
+                Short Excerpt / Summary
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const cleanContent = content ? content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+                  const auto = (cleanContent.length > 0 ? (cleanContent.slice(0, 180) + (cleanContent.length > 180 ? '...' : '')) : '')
+                    || (title.trim() ? `${title.trim()} — tested family recommendations, tips, and practical guides for UAE parents.` : '');
+                  if (auto) setExcerpt(auto);
+                }}
+                className="text-[11px] font-bold text-[#B75B70] hover:text-[#683846] transition-colors flex items-center gap-1"
+              >
+                <span>🪄</span>
+                <span>Auto-Fill from Story</span>
+              </button>
+            </div>
             <textarea
               rows={3}
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
+              placeholder="Short summary for preview cards and search results..."
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs text-[#332D2F] leading-relaxed"
             />
           </div>
@@ -339,11 +420,17 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
             />
           </div>
 
-          {/* Good to Know Quick Facts */}
-          <div className="bg-white p-5 rounded-2xl border-2 border-[#D7BB91] space-y-3">
-            <label className="block text-xs font-bold text-[#683846] uppercase tracking-wider">
-              📌 Good to Know (Quick Facts Grid)
-            </label>
+          {/* Good to Know / Quick Facts Box */}
+          <div className="bg-white rounded-2xl border-2 border-[#D7BB91] p-5 space-y-4">
+            <div>
+              <h3 className="text-xs font-bold text-[#683846] uppercase tracking-wider flex items-center gap-2">
+                <span>📌</span> Good to Know (Quick Facts)
+              </h3>
+              <p className="text-[11px] text-[#332D2F]/70 mt-0.5">
+                Key details shown at the top of the article.
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] font-bold text-[#683846] uppercase mb-0.5">Location</label>
@@ -402,16 +489,13 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
             />
           </div>
 
-          {/* Main Article HTML Body */}
+          {/* Main Article Content - Visual WYSIWYG Editor */}
           <div>
-            <label className="block text-xs font-bold text-[#332D2F] uppercase tracking-wider mb-1">
-              Article Content (HTML formatting supported)
-            </label>
-            <textarea
-              rows={12}
+            <RichContentEditor
+              label="Blog Story & Details"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-mono leading-relaxed text-[#332D2F]"
+              onChange={setContent}
+              placeholder="Write your guide, tips, and experiences here... Highlight any brand/product and click 'Link 🔗' to make it clickable!"
             />
           </div>
 

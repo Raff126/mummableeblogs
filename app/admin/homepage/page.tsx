@@ -13,8 +13,10 @@ export default function AdminHomepageEditPage() {
   useEffect(() => {
     const local = getInitialHomepage();
     setHp(local);
-    fetch(`/api/homepage?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
+    fetch(endpoint, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data === 'object') {
           setHp((prev) => (prev ? { ...prev, ...data } : data));

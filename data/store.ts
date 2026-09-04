@@ -134,6 +134,7 @@ export const STORAGE_KEYS = {
   WORK_WITH_US: 'mummabee_work_with_us',
   CATEGORIES: 'mummabee_categories',
   AUTH: 'mummabee_auth',
+  GOOD_TO_KNOW: 'mummabee_gtk_visibility',
 };
 
 // Default Fallbacks
@@ -385,7 +386,12 @@ export function getInitialArticles(): Article[] {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const savedIds = new Set(parsed.map((a: Article) => a.id));
+        const savedSlugs = new Set(parsed.map((a: Article) => a.slug));
+        const missing = ARTICLES.filter((a) => !savedIds.has(a.id) && !savedSlugs.has(a.slug));
+        return [...parsed, ...missing];
+      }
     } catch (e) {}
   }
   return ARTICLES;
@@ -396,19 +402,74 @@ export async function saveArticles(articles: Article[]): Promise<boolean> {
     safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
     window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ARTICLES, data: articles } }));
 
-    try {
-      const response = await fetch('/api/articles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(articles),
-      });
-      return response.ok;
-    } catch (err) {
-      console.error('Failed to sync articles with server API:', err);
-      return true;
+    // Only attempt server sync if running locally on development server
+    const isLocalhost = Boolean(
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '0.0.0.0'
+    );
+    if (isLocalhost) {
+      try {
+        const response = await fetch('/api/articles/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(articles),
+        });
+        return response.ok;
+      } catch (err) {
+        // Silently skip if endpoint unavailable
+        return true;
+      }
     }
   }
   return true;
+}
+
+// -------------------------------------------------------------
+// GOOD TO KNOW VISIBILITY CONTROLS
+// -------------------------------------------------------------
+
+export function getGoodToKnowVisibilityMap(): Record<string, boolean> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.GOOD_TO_KNOW);
+    return saved ? JSON.parse(saved) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function setGoodToKnowVisibility(idOrSlug: string, visible: boolean): void {
+  if (typeof window === 'undefined') return;
+  const current = getGoodToKnowVisibilityMap();
+  current[idOrSlug] = visible;
+  safeSetLocalStorage(STORAGE_KEYS.GOOD_TO_KNOW, JSON.stringify(current));
+  window.dispatchEvent(new CustomEvent('mummabee_content_updated', {
+    detail: { key: STORAGE_KEYS.GOOD_TO_KNOW, data: current, target: idOrSlug, visible }
+  }));
+}
+
+export function isGoodToKnowVisibleForArticle(article?: { id?: string; slug?: string; goodToKnowEnabled?: boolean; showGoodToKnow?: boolean } | null): boolean {
+  if (!article) return false;
+  const map = getGoodToKnowVisibilityMap();
+  
+  // 1. Check explicit override by ID or Slug in localStorage
+  if (article.id && typeof map[article.id] === 'boolean') {
+    return map[article.id];
+  }
+  if (article.slug && typeof map[article.slug] === 'boolean') {
+    return map[article.slug];
+  }
+
+  // 2. Default: Visible unless explicitly false in article data
+  const isExplicitlyDisabled = (
+    article.goodToKnowEnabled === false ||
+    (article as any).showGoodToKnow === false ||
+    String(article.goodToKnowEnabled) === 'false' ||
+    String((article as any).showGoodToKnow) === 'false'
+  );
+
+  return !isExplicitlyDisabled;
 }
 
 export function getInitialInstagramPosts(): InstagramPost[] {
@@ -453,14 +514,17 @@ export async function saveSubscribers(subscribers: Subscriber[]): Promise<boolea
   safeSetLocalStorage(STORAGE_KEYS.SUBSCRIBERS, JSON.stringify(subscribers));
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.SUBSCRIBERS, data: subscribers } }));
-    try {
-      await fetch('/api/subscribers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscribers }),
-      });
-    } catch (e) {
-      console.warn('Could not sync subscribers with API:', e);
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      try {
+        await fetch('/api/subscribers/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscribers }),
+        });
+      } catch (e) {
+        console.warn('Could not sync subscribers with API:', e);
+      }
     }
   }
   return true;
@@ -479,14 +543,17 @@ export function getInitialDeals(): DiscountCode[] {
 export async function saveDeals(deals: DiscountCode[]): Promise<boolean> {
   safeSetLocalStorage(STORAGE_KEYS.DEALS, JSON.stringify(deals));
   if (typeof window !== 'undefined') {
-    try {
-      await fetch('/api/deals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(deals),
-      });
-    } catch (e) {
-      console.warn('Could not sync deals with API:', e);
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      try {
+        await fetch('/api/deals/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(deals),
+        });
+      } catch (e) {
+        console.warn('Could not sync deals with API:', e);
+      }
     }
     window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.DEALS, data: deals } }));
   }
@@ -537,14 +604,17 @@ export async function saveHomepage(hp: HomepageContent): Promise<boolean> {
   safeSetLocalStorage(STORAGE_KEYS.HOMEPAGE, JSON.stringify(hp));
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.HOMEPAGE, data: hp } }));
-    try {
-      await fetch('/api/homepage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(hp),
-      });
-    } catch (e) {
-      console.warn('Could not sync homepage with API:', e);
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      try {
+        await fetch('/api/homepage/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(hp),
+        });
+      } catch (e) {
+        console.warn('Could not sync homepage with API:', e);
+      }
     }
   }
   return true;
@@ -564,14 +634,17 @@ export async function saveAbout(about: AboutPageContent): Promise<boolean> {
   safeSetLocalStorage(STORAGE_KEYS.ABOUT, JSON.stringify(about));
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ABOUT, data: about } }));
-    try {
-      await fetch('/api/about', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(about),
-      });
-    } catch (e) {
-      console.warn('Could not sync about with API:', e);
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      try {
+        await fetch('/api/about/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(about),
+        });
+      } catch (e) {
+        console.warn('Could not sync about with API:', e);
+      }
     }
   }
   return true;
@@ -591,14 +664,17 @@ export async function saveWorkWithUs(content: WorkWithUsPageContent): Promise<bo
   safeSetLocalStorage(STORAGE_KEYS.WORK_WITH_US, JSON.stringify(content));
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.WORK_WITH_US, data: content } }));
-    try {
-      await fetch('/api/work-with-us', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(content),
-      });
-    } catch (e) {
-      console.warn('Could not sync work-with-us with API:', e);
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      try {
+        await fetch('/api/work-with-us/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(content),
+        });
+      } catch (e) {
+        console.warn('Could not sync work-with-us with API:', e);
+      }
     }
   }
   return true;

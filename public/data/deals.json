@@ -1,0 +1,26 @@
+[
+  {
+    "id": "deal-1788019887315",
+    "title": "Trendyol",
+    "code": "MUMMA",
+    "discountBadge": "10% off",
+    "description": "10% off your entire fashion, home, and kids collection on Trendyol UAE.",
+    "link": "https://www.trendyol.com/en",
+    "expirationDate": "2026-12-31",
+    "showOnHomepage": true,
+    "showOnDealsPage": true,
+    "createdAt": "2026-08-29"
+  },
+  {
+    "id": "deal-1788019418765",
+    "title": "Justhype",
+    "code": "BEE15",
+    "discountBadge": "15% off",
+    "description": "15% off trendy kids streetwear, backpacks, and casual family wear across the UAE.",
+    "link": "https://justhype.ae/",
+    "expirationDate": "2026-12-31",
+    "showOnHomepage": true,
+    "showOnDealsPage": true,
+    "createdAt": "2026-08-29"
+  }
+]

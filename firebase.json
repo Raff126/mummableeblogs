@@ -8,13 +8,65 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "rewrites": [
+      {
+        "source": "/api/articles**",
+        "destination": "/data/articles.json"
+      },
+      {
+        "source": "/api/homepage**",
+        "destination": "/data/homepage.json"
+      },
+      {
+        "source": "/api/about**",
+        "destination": "/data/about.json"
+      },
+      {
+        "source": "/api/deals**",
+        "destination": "/data/deals.json"
+      },
+      {
+        "source": "/api/work-with-us**",
+        "destination": "/data/work-with-us.json"
+      },
+      {
+        "source": "/api/subscribers**",
+        "destination": "/data/subscribers.json"
+      },
+      {
+        "source": "/api/settings**",
+        "destination": "/data/settings.json"
+      }
+    ],
     "headers": [
+      {
+        "source": "/data/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/api/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
       {
         "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|js|css)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "max-age=31536000"
+            "value": "public, max-age=3600"
           }
         ]
       }

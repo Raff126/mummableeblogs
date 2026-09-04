@@ -17,9 +17,11 @@ export default function DonneSection() {
     setContent(localHp);
     setImgSrc(resolvedImage);
 
-    // Fetch fresh homepage data from server
-    fetch(`/api/homepage?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
+    // Fetch fresh homepage data from server or static json
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
+    fetch(endpoint, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data === 'object') {
           try { localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(data)); } catch (_) {}

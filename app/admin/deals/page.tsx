@@ -25,8 +25,10 @@ export default function AdminDealsPage() {
   const loadLatest = () => {
     const local = getInitialDeals();
     setDeals(local);
-    fetch(`/api/deals?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const endpoint = isLocal ? `/api/deals/?t=${Date.now()}` : `/data/deals.json?t=${Date.now()}`;
+    fetch(endpoint, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data)) {
           setDeals(data);

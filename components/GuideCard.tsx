@@ -12,7 +12,7 @@ export default function GuideCard({ article }: GuideCardProps) {
   return (
     <article className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-soft hover:shadow-soft-hover hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
       {/* Thumbnail */}
-      <Link href={`/${article.category}/${article.slug}`} className="relative h-48 sm:h-52 overflow-hidden bg-[#F8EDEF] block">
+      <Link href={`/${article.category}/${article.slug}`} className="block relative aspect-[16/10] overflow-hidden bg-[#F8EDEF]">
         <img
           src={article.featuredImage}
           alt={article.imageAlt || article.title}

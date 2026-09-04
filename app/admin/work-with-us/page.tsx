@@ -11,6 +11,16 @@ export default function AdminWorkWithUsEditPage() {
 
   useEffect(() => {
     setContent(getInitialWorkWithUs());
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const endpoint = isLocal ? `/api/work-with-us/?t=${Date.now()}` : `/data/work-with-us.json?t=${Date.now()}`;
+    fetch(endpoint, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          setContent((prev) => (prev ? { ...prev, ...data } : data));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   if (!content) return null;

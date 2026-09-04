@@ -89,7 +89,9 @@ export default function RootLayout({
                     msg.includes('ronin') ||
                     msg.includes('backpack') ||
                     msg.includes('metamask') ||
-                    msg.includes('cannot redefine property')
+                    msg.includes('cannot redefine property') ||
+                    msg.includes('starttime') ||
+                    msg.includes('reportallchanges')
                   ) {
                     e.stopImmediatePropagation();
                     e.preventDefault();

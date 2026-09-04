@@ -8,12 +8,14 @@ import {
   saveArticles,
   getInitialMedia,
   saveMedia,
+  setGoodToKnowVisibility,
   Article,
   MediaItem,
 } from '../../../../data/store';
 import { CATEGORIES } from '../../../../data/categories';
 import { compressImage } from '../../../../utils/imageCompressor';
 import ImageInputWithPaste from '../../../../components/admin/ImageInputWithPaste';
+import RichContentEditor from '../../../../components/admin/RichContentEditor';
 
 const IMAGE_PRESETS = [
   { label: 'Dubai Activities', url: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&fit=crop&q=80' },
@@ -40,6 +42,7 @@ export default function AdminNewArticlePage() {
   const [factBudget, setFactBudget] = useState('');
   const [factTimeNeeded, setFactTimeNeeded] = useState('');
   const [tags, setTags] = useState('Dubai, UAE, Family Guide');
+  const [goodToKnowEnabled, setGoodToKnowEnabled] = useState(true);
 
   // Media Library state
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
@@ -54,7 +57,7 @@ export default function AdminNewArticlePage() {
     setMediaList(getInitialMedia());
   }, []);
 
-  // Handle direct file upload from computer with client-side compression
+  // Handle direct file upload from computer with client-side compression & server upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -70,17 +73,37 @@ export default function AdminNewArticlePage() {
     try {
       // Compress and resize image to prevent storage errors
       const compressedDataUrl = await compressImage(file, 1200, 1200, 0.82);
-      setFeaturedImage(compressedDataUrl);
+      
+      // Upload to server to get permanent /uploads/ file URL
+      let finalUrl = compressedDataUrl;
+      try {
+        const uploadRes = await fetch('/api/upload/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: compressedDataUrl,
+            filename: file.name,
+          }),
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          if (data.url) finalUrl = data.url;
+        }
+      } catch (uploadErr) {
+        console.warn('Server upload fallback:', uploadErr);
+      }
+
+      setFeaturedImage(finalUrl);
 
       // Store in Media Library for reuse
       const newMedia: MediaItem = {
         id: `med-${Date.now()}`,
-        url: compressedDataUrl,
+        url: finalUrl,
         filename: file.name,
         uploadDate: new Date().toISOString().split('T')[0],
         dimensions: '1200x800',
       };
-      const updatedMedia = [newMedia, ...mediaList];
+      const updatedMedia = [newMedia, ...mediaList.filter(m => m.url !== finalUrl)].slice(0, 30);
       setMediaList(updatedMedia);
       saveMedia(updatedMedia);
 
@@ -97,55 +120,96 @@ export default function AdminNewArticlePage() {
   const handleSave = async (isDraft: boolean) => {
     if (!title.trim()) {
       setError('Please enter a title for your blog post.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    // Auto-generate excerpt if empty instead of blocking the user
+    const cleanContent = content ? content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    const finalExcerpt = excerpt.trim()
+      || (cleanContent.length > 0 ? (cleanContent.slice(0, 180) + (cleanContent.length > 180 ? '...' : '')) : '')
+      || answerSummary.trim()
+      || `${title.trim()} — tested family recommendations, tips, and practical guides for UAE parents.`;
+
     if (!excerpt.trim()) {
-      setError('Please enter a short summary or excerpt.');
-      return;
+      setExcerpt(finalExcerpt);
     }
 
     setIsSaving(true);
     setError('');
 
     try {
-      const currentArticles = getInitialArticles();
-      const slug = title
+      // Fetch latest articles
+      let currentArticles = getInitialArticles();
+      const isLocal = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1'
+      );
+      const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
+      try {
+        const apiRes = await fetch(endpoint, { cache: 'no-store' });
+        if (apiRes.ok) {
+          const list = await apiRes.json();
+          if (Array.isArray(list) && list.length > 0) {
+            currentArticles = list;
+          }
+        }
+      } catch (fetchErr) {
+        // Fallback to currentArticles
+      }
+
+      const slugBase = title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
+      let slug = slugBase || `post-${Date.now()}`;
+      if (currentArticles.some((a) => a.slug === slug)) {
+        slug = `${slug}-${Date.now().toString().slice(-4)}`;
+      }
+
+      // Compute realistic read time based on word count
+      const words = (content + ' ' + title).replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+      const computedReadTime = `${Math.max(2, Math.ceil(words / 180))} min read`;
+
       const newArticle: Article = {
         id: `art-${Date.now()}`,
-        slug: slug || `post-${Date.now()}`,
-        title,
+        slug,
+        title: title.trim(),
         category,
-        excerpt,
-        content: content || `<p>${excerpt}</p>`,
+        excerpt: finalExcerpt,
+        content: content.trim() || `<p>${finalExcerpt}</p>`,
         publishedAt: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        readTime: '4 min read',
+        readTime: computedReadTime,
         author: 'Donne',
         featuredImage: featuredImage || IMAGE_PRESETS[0].url,
-        imageAlt: title,
-        imageCaption,
+        imageAlt: title.trim(),
+        imageCaption: imageCaption.trim(),
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
         isDraft,
-        answerSummary: answerSummary || excerpt,
+        answerSummary: (answerSummary || finalExcerpt).trim(),
+        goodToKnowEnabled: Boolean(goodToKnowEnabled),
+        showGoodToKnow: Boolean(goodToKnowEnabled),
         quickFacts: {
-          location: factLocation || 'Dubai & Abu Dhabi',
-          bestFor: factBestFor || 'All Ages',
-          budget: factBudget || 'Varies',
-          timeNeeded: factTimeNeeded || '2–3 hours',
+          location: factLocation.trim(),
+          bestFor: factBestFor.trim(),
+          budget: factBudget.trim(),
+          timeNeeded: factTimeNeeded.trim(),
         },
-        location: factLocation,
-        mummaBeeTip: mummaBeeTip || 'Always book morning slots during peak months to skip queues!',
+        location: factLocation.trim(),
+        mummaBeeTip: mummaBeeTip.trim() || 'Always book morning slots during peak months to skip queues!',
       };
 
-      const updated = [newArticle, ...currentArticles];
+      // Save to Good to Know visibility map for immediate global effect
+      setGoodToKnowVisibility(newArticle.id, Boolean(goodToKnowEnabled));
+      setGoodToKnowVisibility(newArticle.slug, Boolean(goodToKnowEnabled));
+
+      const updated = [newArticle, ...currentArticles.filter(a => a.id !== newArticle.id && a.slug !== newArticle.slug)];
       await saveArticles(updated);
 
       setMessage(isDraft ? '✨ Draft saved successfully!' : '🎉 Post published live to the website!');
       setTimeout(() => {
-        router.push('/admin');
+        router.push('/admin/articles');
       }, 1000);
     } catch (saveErr) {
       console.error('Error publishing post:', saveErr);
@@ -220,7 +284,7 @@ export default function AdminNewArticlePage() {
             onChange={(e) => setCategory(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-bold text-[#332D2F] bg-white"
           >
-            {Object.entries(CATEGORIES).map(([catSlug, info]) => (
+            {Object.entries(CATEGORIES).filter(([catSlug]) => catSlug !== 'expat-edit').map(([catSlug, info]) => (
               <option key={catSlug} value={catSlug}>{info.name}</option>
             ))}
           </select>
@@ -278,16 +342,34 @@ export default function AdminNewArticlePage() {
 
         {/* Short Summary */}
         <div>
-          <label className="block text-xs font-bold text-[#332D2F] uppercase tracking-wider mb-1.5">
-            Short Summary (1-2 sentences) *
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-bold text-[#332D2F] uppercase tracking-wider">
+              Short Summary (1-2 sentences)
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const cleanContent = content ? content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+                const auto = (cleanContent.length > 0 ? (cleanContent.slice(0, 180) + (cleanContent.length > 180 ? '...' : '')) : '')
+                  || (title.trim() ? `${title.trim()} — tested family recommendations, tips, and practical guides for UAE parents.` : '');
+                if (auto) setExcerpt(auto);
+              }}
+              className="text-[11px] font-bold text-[#B75B70] hover:text-[#683846] transition-colors flex items-center gap-1"
+            >
+              <span>🪄</span>
+              <span>Auto-Fill from Story</span>
+            </button>
+          </div>
           <textarea
             rows={2}
-            placeholder="A quick summary for parents scanning the guide..."
+            placeholder="A quick summary for parents scanning the guide (automatically generated if left blank)..."
             value={excerpt}
             onChange={(e) => setExcerpt(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs text-[#332D2F] leading-relaxed"
           />
+          <span className="text-[10px] text-gray-400 mt-1 block">
+            💡 If left blank, a summary will be automatically generated from your story when publishing.
+          </span>
         </div>
 
         {/* Quick Answer Callout */}
@@ -304,11 +386,17 @@ export default function AdminNewArticlePage() {
           />
         </div>
 
-        {/* Good to Know Grid */}
-        <div className="bg-white p-5 rounded-2xl border-2 border-[#D7BB91] space-y-3">
-          <label className="block text-xs font-bold text-[#683846] uppercase tracking-wider">
-            📌 Good to Know (Quick Facts)
-          </label>
+        {/* Good to Know / Quick Facts Box */}
+        <div className="bg-white rounded-2xl border-2 border-[#D7BB91] p-5 space-y-4">
+          <div>
+            <h3 className="text-xs font-bold text-[#683846] uppercase tracking-wider flex items-center gap-2">
+              <span>📌</span> Good to Know (Quick Facts)
+            </h3>
+            <p className="text-[11px] text-[#332D2F]/70 mt-0.5">
+              Key details shown at the top of the article.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] font-bold text-[#683846] uppercase mb-0.5">Location</label>
@@ -353,17 +441,13 @@ export default function AdminNewArticlePage() {
           </div>
         </div>
 
-        {/* Post Story Content */}
+        {/* Post Story Content - Visual WYSIWYG Editor */}
         <div>
-          <label className="block text-xs font-bold text-[#332D2F] uppercase tracking-wider mb-1.5">
-            Blog Story & Details (HTML formatting supported)
-          </label>
-          <textarea
-            rows={8}
-            placeholder="Write your guide, tips, and experiences here..."
+          <RichContentEditor
+            label="Blog Story & Details"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs leading-relaxed font-sans text-[#332D2F]"
+            onChange={setContent}
+            placeholder="Write your guide, tips, and experiences here... Highlight any brand/product and click 'Link 🔗' to make it clickable!"
           />
         </div>
 

@@ -33,15 +33,33 @@ export default function AdminMediaPage() {
       const dataUrl = await compressImage(fileOrDataUrl, 1000, 1000, 0.78);
       const filename = filenameHint || (typeof fileOrDataUrl !== 'string' ? fileOrDataUrl.name : `image-${Date.now()}.jpg`);
       
+      let finalUrl = dataUrl;
+      try {
+        const uploadRes = await fetch('/api/upload/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: dataUrl,
+            filename: filename,
+          }),
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          if (data.url) finalUrl = data.url;
+        }
+      } catch (err) {
+        console.warn('Server upload fallback:', err);
+      }
+
       const newItem: MediaItem = {
         id: `med-${Date.now()}`,
-        url: dataUrl,
+        url: finalUrl,
         filename: filename,
         uploadDate: new Date().toISOString().split('T')[0],
         dimensions: '1000x1000',
       };
 
-      const updated = [newItem, ...mediaList.filter((m) => m.url !== dataUrl)].slice(0, 25);
+      const updated = [newItem, ...mediaList.filter((m) => m.url !== finalUrl)].slice(0, 30);
       setMediaList(updated);
       saveMedia(updated);
       setMessage('Image uploaded, optimized, and saved to Media Library!');

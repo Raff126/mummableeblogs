@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getArticleBySlug, getAllArticles, ArticleItem } from '../../../data/articles';
-import { getInitialArticles } from '../../../data/store';
+import { getInitialArticles, isGoodToKnowVisibleForArticle } from '../../../data/store';
 import { CATEGORIES } from '../../../data/categories';
 import GuideCard from '../../../components/GuideCard';
 import NewsletterBand from '../../../components/NewsletterBand';
+import { formatArticleContent } from '../../../utils/contentFormatter';
+
 
 interface ArticleViewProps {
   initialArticle?: ArticleItem | null;
@@ -19,20 +21,42 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
   const [relatedArticles, setRelatedArticles] = useState<ArticleItem[]>([]);
   const [isLoading, setIsLoading] = useState(!initialArticle);
 
-  useEffect(() => {
+  const refreshArticle = () => {
     if (!slug) return;
 
     const normalizedSlug = decodeURIComponent(slug).toLowerCase().trim().replace(/\/$/, '');
 
     const findArticle = (list: ArticleItem[]) => {
-      return list.find(
-        (a) =>
-          a.slug?.toLowerCase().trim().replace(/\/$/, '') === normalizedSlug ||
-          a.id?.toLowerCase().trim() === normalizedSlug
+      return (
+        list.find(
+          (a) =>
+            a.slug?.toLowerCase().trim().replace(/^\//, '').replace(/\/$/, '') === normalizedSlug ||
+            a.id?.toLowerCase().trim() === normalizedSlug
+        ) ||
+        list.find(
+          (a) =>
+            encodeURIComponent(a.slug || '').toLowerCase() === normalizedSlug ||
+            a.slug?.toLowerCase() === slug.toLowerCase()
+        )
       );
     };
 
-    // 1. Check initialArticle if already matching
+    // 1. Check local store FIRST (user edits / drafts in localStorage take precedence over static build)
+    const localArticles = getInitialArticles();
+    const foundInLocal = findArticle(localArticles);
+
+    if (foundInLocal) {
+      setArticle(foundInLocal);
+      const all = localArticles.length > 0 ? localArticles : getAllArticles();
+      const related = all
+        .filter((a) => a.category === foundInLocal.category && a.slug !== foundInLocal.slug && !a.isDraft)
+        .slice(0, 4);
+      setRelatedArticles(related);
+      setIsLoading(false);
+      return;
+    }
+
+    // 2. Check initialArticle if already matching
     if (initialArticle && (
       initialArticle.slug?.toLowerCase().trim().replace(/\/$/, '') === normalizedSlug ||
       initialArticle.id?.toLowerCase().trim() === normalizedSlug
@@ -47,36 +71,54 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       return;
     }
 
-    // 2. Try local store and static data
-    const localArticles = getInitialArticles();
-    let found = findArticle(localArticles) || findArticle(getAllArticles());
-
-    if (found) {
-      setArticle(found);
-      const related = (localArticles.length > 0 ? localArticles : getAllArticles())
-        .filter((a) => a.category === found?.category && a.slug !== found?.slug && !a.isDraft)
+    // 3. Fall back to static articles
+    const foundInStatic = findArticle(getAllArticles());
+    if (foundInStatic) {
+      setArticle(foundInStatic);
+      const all = getAllArticles();
+      const related = all
+        .filter((a) => a.category === foundInStatic.category && a.slug !== foundInStatic.slug && !a.isDraft)
         .slice(0, 4);
       setRelatedArticles(related);
       setIsLoading(false);
-    } else {
-      // 3. Try fetching from server API
-      fetch('/api/articles')
-        .then((res) => res.json())
-        .then((data: ArticleItem[]) => {
-          if (Array.isArray(data)) {
-            const apiFound = findArticle(data);
-            if (apiFound) {
-              setArticle(apiFound);
-              const related = data
-                .filter((a) => a.category === apiFound.category && a.slug !== apiFound.slug && !a.isDraft)
-                .slice(0, 4);
-              setRelatedArticles(related);
-            }
-          }
-        })
-        .catch((err) => console.error('Error fetching article from API:', err))
-        .finally(() => setIsLoading(false));
+      return;
     }
+
+    // 4. Try fetching from static articles.json (works in static export)
+    fetch(`/data/articles.json?t=${Date.now()}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data: ArticleItem[]) => {
+        if (Array.isArray(data)) {
+          const apiFound = findArticle(data);
+          if (apiFound) {
+            setArticle(apiFound);
+            const related = data
+              .filter((a) => a.category === apiFound.category && a.slug !== apiFound.slug && !a.isDraft)
+              .slice(0, 4);
+            setRelatedArticles(related);
+          }
+        }
+      })
+      .catch((err) => console.error('Error fetching article from static JSON:', err))
+      .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    refreshArticle();
+
+    const handleUpdate = () => {
+      refreshArticle();
+    };
+
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
   }, [slug, categorySlug, initialArticle]);
 
   if (isLoading) {
@@ -234,19 +276,21 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
 
           {/* Featured Hero Photograph */}
           <div className="space-y-2">
-            <div className="rounded-3xl overflow-hidden shadow-card border-2 border-gray-100 bg-[#F8EDEF]">
-              <img
-                src={article.featuredImage}
-                alt={article.imageAlt || article.title}
-                fetchPriority="high"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (!target.src.includes('358792494_661391199240576_3424351230899219709_n.jpg')) {
-                    target.src = '/images/358792494_661391199240576_3424351230899219709_n.jpg';
-                  }
-                }}
-                className="w-full h-80 sm:h-[420px] object-cover"
-              />
+            <div className="rounded-2xl overflow-hidden shadow-soft">
+              <div className="relative">
+                <img
+                  src={article.featuredImage}
+                  alt={article.imageAlt || article.title}
+                  fetchPriority="high"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('358792494_661391199240576_3424351230899219709_n.jpg')) {
+                      target.src = '/images/358792494_661391199240576_3424351230899219709_n.jpg';
+                    }
+                  }}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
             {article.imageCaption && (
               <p className="text-center text-xs text-[#332D2F]/80 italic pt-1">
@@ -271,39 +315,51 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
             )}
 
             {/* Good to Know Important Information Box */}
-            {article.quickFacts && (article.quickFacts.location || article.quickFacts.bestFor || article.quickFacts.budget || article.quickFacts.timeNeeded) && (
-              <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-[#D7BB91] shadow-soft space-y-4">
-                <h3 className="font-serif text-xl font-bold text-[#683846] flex items-center gap-2">
-                  <span>📌</span> GOOD TO KNOW
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  {article.quickFacts.location && (
-                    <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                      <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">📍 Location</span>
-                      <span className="text-[#332D2F] font-medium">{article.quickFacts.location}</span>
-                    </div>
-                  )}
-                  {article.quickFacts.bestFor && (
-                    <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                      <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">👧 Best For</span>
-                      <span className="text-[#332D2F] font-medium">{article.quickFacts.bestFor}</span>
-                    </div>
-                  )}
-                  {article.quickFacts.budget && (
-                    <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                      <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">💰 Budget</span>
-                      <span className="text-[#332D2F] font-medium">{article.quickFacts.budget}</span>
-                    </div>
-                  )}
-                  {article.quickFacts.timeNeeded && (
-                    <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                      <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">⏱️ Time Needed</span>
-                      <span className="text-[#332D2F] font-medium">{article.quickFacts.timeNeeded}</span>
-                    </div>
-                  )}
+            {(() => {
+              if (!isGoodToKnowVisibleForArticle(article)) return null;
+              if (!article.quickFacts) return null;
+              const hasFacts = Boolean(
+                article.quickFacts.location ||
+                article.quickFacts.bestFor ||
+                article.quickFacts.budget ||
+                article.quickFacts.timeNeeded
+              );
+              if (!hasFacts) return null;
+
+              return (
+                <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-[#D7BB91] shadow-soft space-y-4">
+                  <h3 className="font-serif text-xl font-bold text-[#683846] flex items-center gap-2">
+                    <span>📌</span> GOOD TO KNOW
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    {article.quickFacts.location && (
+                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">📍 Location</span>
+                        <span className="text-[#332D2F] font-medium">{article.quickFacts.location}</span>
+                      </div>
+                    )}
+                    {article.quickFacts.bestFor && (
+                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">👧 Best For</span>
+                        <span className="text-[#332D2F] font-medium">{article.quickFacts.bestFor}</span>
+                      </div>
+                    )}
+                    {article.quickFacts.budget && (
+                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">💰 Budget</span>
+                        <span className="text-[#332D2F] font-medium">{article.quickFacts.budget}</span>
+                      </div>
+                    )}
+                    {article.quickFacts.timeNeeded && (
+                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">⏱️ Time Needed</span>
+                        <span className="text-[#332D2F] font-medium">{article.quickFacts.timeNeeded}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Mumma Bee Tip Box */}
             {article.mummaBeeTip && (
@@ -318,7 +374,7 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
             {/* Article Long-Form Body HTML with High-Contrast Prose Styling */}
             <div
               className="article-prose pt-4"
-              dangerouslySetInnerHTML={{ __html: article.content }}
+              dangerouslySetInnerHTML={{ __html: formatArticleContent(article.content) }}
             />
 
             {/* Topics / Tags */}

@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getInitialArticles, saveArticles, Article } from '../../../data/store';
+import {
+  getInitialArticles,
+  saveArticles,
+  setGoodToKnowVisibility,
+  isGoodToKnowVisibleForArticle,
+  Article
+} from '../../../data/store';
 import { CATEGORIES } from '../../../data/categories';
 
 export default function AdminArticlesPage() {
@@ -10,6 +16,7 @@ export default function AdminArticlesPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [gtkFilter, setGtkFilter] = useState('ALL');
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'TITLE'>('NEWEST');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
@@ -18,10 +25,16 @@ export default function AdminArticlesPage() {
     const local = getInitialArticles();
     setArticles(local);
 
-    fetch(`/api/articles?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data: Article[]) => {
-        if (Array.isArray(data)) {
+    const isLocal = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    );
+    const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
+
+    fetch(endpoint, { cache: 'no-store' })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data: Article[] | null) => {
+        if (Array.isArray(data) && data.length > 0) {
           try {
             localStorage.setItem('mummabee_articles', JSON.stringify(data));
           } catch (_) {}
@@ -62,6 +75,30 @@ export default function AdminArticlesPage() {
     setTimeout(() => setMessage(''), 3000);
   };
 
+  const handleToggleGoodToKnow = (art: Article) => {
+    const currentlyVisible = isGoodToKnowVisibleForArticle(art);
+    const nextState = !currentlyVisible;
+    
+    // Save to visibility map in localStorage & dispatch update event
+    setGoodToKnowVisibility(art.id, nextState);
+    if (art.slug) {
+      setGoodToKnowVisibility(art.slug, nextState);
+    }
+
+    // Also update articles list in store
+    const updated = articles.map((a) => {
+      if (a.id === art.id || (art.slug && a.slug === art.slug)) {
+        return { ...a, goodToKnowEnabled: nextState, showGoodToKnow: nextState };
+      }
+      return a;
+    });
+    setArticles(updated);
+    saveArticles(updated);
+
+    setMessage(`"Good to Know" on "${art.title}" is now ${nextState ? 'SHOWN (ON)' : 'HIDDEN (OFF)'}.`);
+    setTimeout(() => setMessage(''), 4000);
+  };
+
   const handleDelete = (id: string) => {
     const updated = articles.filter((a) => a.id !== id);
     setArticles(updated);
@@ -80,7 +117,13 @@ export default function AdminArticlesPage() {
         statusFilter === 'ALL' ||
         (statusFilter === 'PUBLISHED' && !a.isDraft) ||
         (statusFilter === 'DRAFT' && a.isDraft);
-      return matchSearch && matchCat && matchStatus;
+      const isVisible = isGoodToKnowVisibleForArticle(a);
+      const matchGtk =
+        gtkFilter === 'ALL' ||
+        (gtkFilter === 'SHOWN' && isVisible) ||
+        (gtkFilter === 'HIDDEN' && !isVisible);
+
+      return matchSearch && matchCat && matchStatus && matchGtk;
     })
     .sort((a, b) => {
       if (sortOrder === 'TITLE') return a.title.localeCompare(b.title);
@@ -129,7 +172,7 @@ export default function AdminArticlesPage() {
           className="w-full md:w-auto px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
         >
           <option value="ALL">All Categories</option>
-          {Object.entries(CATEGORIES).map(([catSlug, info]) => (
+          {Object.entries(CATEGORIES).filter(([catSlug]) => catSlug !== 'expat-edit').map(([catSlug, info]) => (
             <option key={catSlug} value={catSlug}>{info.name}</option>
           ))}
         </select>
@@ -143,6 +186,17 @@ export default function AdminArticlesPage() {
           <option value="ALL">All Status</option>
           <option value="PUBLISHED">Live / Published</option>
           <option value="DRAFT">Drafts</option>
+        </select>
+
+        {/* Filter Good to Know */}
+        <select
+          value={gtkFilter}
+          onChange={(e) => setGtkFilter(e.target.value)}
+          className="w-full md:w-auto px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
+        >
+          <option value="ALL">📌 Good to Know: All</option>
+          <option value="SHOWN">📌 Good to Know: Shown (ON)</option>
+          <option value="HIDDEN">✕ Good to Know: Hidden (OFF)</option>
         </select>
 
         {/* Sort */}
@@ -166,6 +220,7 @@ export default function AdminArticlesPage() {
                 <th className="py-3 px-6">Article</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-center">Good to Know</th>
                 <th className="py-3 px-4">Published Date</th>
                 <th className="py-3 px-6 text-right">Actions</th>
               </tr>
@@ -174,6 +229,7 @@ export default function AdminArticlesPage() {
               {filtered.length > 0 ? (
                 filtered.map((art) => {
                   const catInfo = CATEGORIES[art.category];
+                  const isGtkOn = isGoodToKnowVisibleForArticle(art);
                   return (
                     <tr key={art.id} className="hover:bg-[#F8EDEF]/30 transition-colors">
                       <td className="py-4 px-6">
@@ -198,6 +254,20 @@ export default function AdminArticlesPage() {
                         }`}>
                           {art.isDraft ? 'Draft' : 'Published'}
                         </span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleGoodToKnow(art)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase transition-all shadow-2xs ${
+                            isGtkOn
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100'
+                              : 'bg-gray-100 text-gray-500 border border-gray-300 hover:bg-gray-200'
+                          }`}
+                          title={`Click to ${isGtkOn ? 'Hide' : 'Show'} Good to Know section on this article page`}
+                        >
+                          <span>{isGtkOn ? '📌 ON' : '✕ OFF'}</span>
+                        </button>
                       </td>
                       <td className="py-4 px-4 text-[#332D2F]/80">{art.publishedAt}</td>
                       <td className="py-4 px-6 text-right">
@@ -234,7 +304,7 @@ export default function AdminArticlesPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#332D2F]/60 text-xs">
+                  <td colSpan={6} className="py-12 text-center text-[#332D2F]/60 text-xs">
                     No articles found matching your criteria.
                   </td>
                 </tr>

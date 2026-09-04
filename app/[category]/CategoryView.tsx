@@ -43,7 +43,9 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
 
     const local = getInitialArticles();
     const all = local.length > 0 ? local : getAllArticles();
-    const filtered = all.filter((a) => a.category === categorySlug && !a.isDraft);
+    const expatSlugs = ['the-expat-edit', 'expat-edit'];
+    const matchCat = (artCat: string) => expatSlugs.includes(categorySlug) ? expatSlugs.includes(artCat) : artCat === categorySlug;
+    const filtered = all.filter((a) => matchCat(a.category) && !a.isDraft);
 
     const sorted = [...filtered].sort((a, b) => {
       const timeA = new Date(a.publishedAt).getTime() || 0;
@@ -55,11 +57,15 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
     setArticles(sorted);
     setIsLoading(false);
 
-    fetch(`/api/articles?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
+    const endpoint = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? `/api/articles?t=${Date.now()}`
+      : `/data/articles.json?t=${Date.now()}`;
+
+    fetch(endpoint, { cache: 'no-store' })
+      .then((res) => res.ok ? res.json() : null)
       .then((apiArticles: ArticleItem[]) => {
         if (Array.isArray(apiArticles)) {
-          const apiFiltered = apiArticles.filter((a) => a.category === categorySlug && !a.isDraft);
+          const apiFiltered = apiArticles.filter((a) => matchCat(a.category) && !a.isDraft);
           const apiSorted = [...apiFiltered].sort((a, b) => {
             const timeA = new Date(a.publishedAt).getTime() || 0;
             const timeB = new Date(b.publishedAt).getTime() || 0;

@@ -70,6 +70,15 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
 }
 
+.article-prose em, .article-prose i {
+  font-style: italic;
+}
+
+.article-prose u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .article-prose a {
   color: #B75B70;
   font-weight: 600;
@@ -112,6 +121,15 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.25rem;
   color: #683846;
   line-height: 1.6;
+}
+
+/* Rich Editor Empty Placeholder */
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #9CA3AF;
+  pointer-events: none;
+  font-style: italic;
+  display: block;
 }
 
 /* Button Utilities according to Reference Spec */

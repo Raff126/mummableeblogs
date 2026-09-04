@@ -48,7 +48,7 @@ export default function ImageInputWithPaste({
   const uploadToServer = async (dataUrlOrFile: string | File, filenameHint?: string): Promise<string> => {
     try {
       if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:image/')) {
-        const res = await fetch('/api/upload', {
+        const res = await fetch('/api/upload/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -63,7 +63,7 @@ export default function ImageInputWithPaste({
       } else if (dataUrlOrFile instanceof File) {
         const formData = new FormData();
         formData.append('file', dataUrlOrFile);
-        const res = await fetch('/api/upload', {
+        const res = await fetch('/api/upload/', {
           method: 'POST',
           body: formData,
         });

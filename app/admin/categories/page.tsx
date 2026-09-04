@@ -66,7 +66,7 @@ function AdminCategoriesContent() {
     setTimeout(() => setMessage(''), 4000);
   };
 
-  const categoriesList = Object.values(categoriesMap);
+  const categoriesList = Object.values(categoriesMap).filter(cat => cat.slug !== 'expat-edit');
 
   return (
     <div className="space-y-6 max-w-4xl font-sans">
