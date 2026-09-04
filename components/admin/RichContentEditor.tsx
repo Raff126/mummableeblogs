@@ -379,13 +379,10 @@ export default function RichContentEditor({
   return (
     <div className="space-y-2 font-sans">
       {/* Editor Header */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+      <div className="mb-1.5">
         <label className="block text-xs font-bold text-[#332D2F] uppercase tracking-wider">
           {label}
         </label>
-        <span className="text-[11px] text-[#332D2F]/70">
-          Highlight words (e.g. <em>&ldquo;The Dubai Mall&rdquo;</em>) and click <strong>Link 🔗</strong> to attach a link.
-        </span>
       </div>
 
       {/* Main Google Docs / Word Style Editor Container */}
@@ -425,9 +422,7 @@ export default function RichContentEditor({
             )}
           </div>
 
-          <span className="text-[11px] text-gray-500 hidden sm:inline">
-            💡 Highlight any brand or word and click <strong>Add Link 🔗</strong> (or press Ctrl+K)
-          </span>
+          
         </div>
 
         {/* Visual ContentEditable Area with Real Article Prose Typography */}
@@ -510,16 +505,7 @@ export default function RichContentEditor({
           )}
         </div>
 
-        {/* Footer info */}
-        <div className="bg-[#FAF6F7] border-t border-gray-100 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span>
-              💡 <strong>Example:</strong> Highlight <em>&ldquo;The Dubai Mall&rdquo;</em> → Click <strong>Link 🔗</strong> → Enter URL. Only those words will be clickable!
-            </span>
-          </div>
-          <span className="text-gray-400 font-medium">Visual Editor (No HTML codes needed)</span>
-        </div>
+        
       </div>
 
       {/* Clean Word/Google Docs Link Modal */}
