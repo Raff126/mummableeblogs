@@ -5,6 +5,8 @@ import Link from 'next/link';
 import {
   getInitialArticles,
   saveArticles,
+  deleteArticle,
+  getDeletedArticleIds,
   setGoodToKnowVisibility,
   isGoodToKnowVisibleForArticle,
   Article
@@ -33,12 +35,32 @@ export default function AdminArticlesPage() {
 
     fetch(endpoint, { cache: 'no-store' })
       .then((res) => res.ok ? res.json() : null)
-      .then((data: Article[] | null) => {
-        if (Array.isArray(data) && data.length > 0) {
-          try {
-            localStorage.setItem('mummabee_articles', JSON.stringify(data));
-          } catch (_) {}
-          setArticles(data);
+      .then((serverArticles: Article[] | null) => {
+        if (Array.isArray(serverArticles) && serverArticles.length > 0) {
+          const deleted = getDeletedArticleIds();
+          const currentLocal = getInitialArticles();
+          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
+
+          // Only merge server articles that are not deleted and not already customized in local storage
+          let hasNew = false;
+          const merged = [...currentLocal];
+          for (const sArt of serverArticles) {
+            if (deleted.has(sArt.id) || (sArt.slug && deleted.has(sArt.slug))) {
+              continue;
+            }
+            if (!localMap.has(sArt.id)) {
+              merged.push(sArt);
+              localMap.set(sArt.id, sArt);
+              hasNew = true;
+            }
+          }
+
+          if (hasNew) {
+            setArticles(merged);
+            try {
+              localStorage.setItem('mummabee_articles', JSON.stringify(merged));
+            } catch (_) {}
+          }
         }
       })
       .catch(() => {});
@@ -62,7 +84,7 @@ export default function AdminArticlesPage() {
     };
   }, []);
 
-  const handleTogglePublish = (id: string) => {
+  const handleTogglePublish = async (id: string) => {
     const updated = articles.map((a) => {
       if (a.id === id) {
         return { ...a, isDraft: !a.isDraft };
@@ -70,7 +92,7 @@ export default function AdminArticlesPage() {
       return a;
     });
     setArticles(updated);
-    saveArticles(updated);
+    await saveArticles(updated);
     setMessage('Article status updated successfully.');
     setTimeout(() => setMessage(''), 3000);
   };
@@ -99,10 +121,11 @@ export default function AdminArticlesPage() {
     setTimeout(() => setMessage(''), 4000);
   };
 
-  const handleDelete = (id: string) => {
-    const updated = articles.filter((a) => a.id !== id);
+  const handleDelete = async (id: string) => {
+    const target = articles.find((a) => a.id === id);
+    await deleteArticle(id, target?.slug);
+    const updated = getInitialArticles();
     setArticles(updated);
-    saveArticles(updated);
     setDeleteConfirmId(null);
     setMessage('Article deleted successfully.');
     setTimeout(() => setMessage(''), 3000);

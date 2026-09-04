@@ -123,6 +123,7 @@ export interface WorkWithUsPageContent {
 
 export const STORAGE_KEYS = {
   ARTICLES: 'mummabee_articles',
+  DELETED_ARTICLES: 'mummabee_deleted_articles',
   INSTAGRAM: 'mummabee_instagram',
   INQUIRIES: 'mummabee_inquiries',
   SUBSCRIBERS: 'mummabee_subscribers',
@@ -380,21 +381,53 @@ function safeSetLocalStorage(key: string, value: string): boolean {
 // STORE GETTERS & SETTERS
 // -------------------------------------------------------------
 
+export function getDeletedArticleIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.DELETED_ARTICLES || 'mummabee_deleted_articles');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  } catch (_) {
+    return new Set();
+  }
+}
+
+export function markArticleDeleted(idOrSlug: string): void {
+  if (typeof window === 'undefined' || !idOrSlug) return;
+  try {
+    const deleted = getDeletedArticleIds();
+    deleted.add(idOrSlug);
+    safeSetLocalStorage(
+      STORAGE_KEYS.DELETED_ARTICLES || 'mummabee_deleted_articles',
+      JSON.stringify(Array.from(deleted))
+    );
+  } catch (_) {}
+}
+
 export function getInitialArticles(): Article[] {
   if (typeof window === 'undefined') return ARTICLES;
+  const deleted = getDeletedArticleIds();
   const saved = localStorage.getItem(STORAGE_KEYS.ARTICLES);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const savedIds = new Set(parsed.map((a: Article) => a.id));
-        const savedSlugs = new Set(parsed.map((a: Article) => a.slug));
-        const missing = ARTICLES.filter((a) => !savedIds.has(a.id) && !savedSlugs.has(a.slug));
-        return [...parsed, ...missing];
+      if (Array.isArray(parsed)) {
+        // Return user saved list without resurrecting deleted articles
+        return parsed.filter((a: Article) => !deleted.has(a.id) && !deleted.has(a.slug));
       }
     } catch (e) {}
   }
-  return ARTICLES;
+  return ARTICLES.filter((a) => !deleted.has(a.id) && !deleted.has(a.slug));
+}
+
+export async function deleteArticle(id: string, slug?: string): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  markArticleDeleted(id);
+  if (slug) markArticleDeleted(slug);
+
+  const current = getInitialArticles().filter(
+    (a) => a.id !== id && (!slug || a.slug !== slug)
+  );
+  return saveArticles(current);
 }
 
 export async function saveArticles(articles: Article[]): Promise<boolean> {
