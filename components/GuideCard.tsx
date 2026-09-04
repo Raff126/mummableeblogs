@@ -12,7 +12,7 @@ export default function GuideCard({ article }: GuideCardProps) {
   return (
     <article className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-soft hover:shadow-soft-hover hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
       {/* Thumbnail */}
-      <Link href={`/${article.category}/${article.slug}`} className="block relative aspect-[16/10] overflow-hidden bg-[#F8EDEF]">
+      <Link href={`/${article.category}/${article.slug}`} prefetch={false} className="block relative aspect-[16/10] overflow-hidden bg-[#F8EDEF]">
         <img
           src={article.featuredImage}
           alt={article.imageAlt || article.title}
@@ -42,7 +42,7 @@ export default function GuideCard({ article }: GuideCardProps) {
           </div>
 
           <h3 className="font-serif text-lg sm:text-xl font-bold text-[#683846] group-hover:text-[#B75B70] transition-colors leading-snug">
-            <Link href={`/${article.category}/${article.slug}`}>
+            <Link href={`/${article.category}/${article.slug}`} prefetch={false}>
               {article.title}
             </Link>
           </h3>
@@ -56,6 +56,7 @@ export default function GuideCard({ article }: GuideCardProps) {
           <span className="text-[#332D2F]/70 font-medium">{article.readTime}</span>
           <Link
             href={`/${article.category}/${article.slug}`}
+            prefetch={false}
             className="font-bold text-[#683846] group-hover:text-[#B75B70] transition-colors inline-flex items-center gap-1"
           >
             Read Guide <span className="group-hover:translate-x-1 transition-transform">→</span>

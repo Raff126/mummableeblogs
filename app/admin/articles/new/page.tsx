@@ -8,6 +8,7 @@ import {
   saveArticles,
   getInitialMedia,
   saveMedia,
+  getDeletedArticleIds,
   setGoodToKnowVisibility,
   Article,
   MediaItem,
@@ -151,7 +152,17 @@ export default function AdminNewArticlePage() {
         if (apiRes.ok) {
           const list = await apiRes.json();
           if (Array.isArray(list) && list.length > 0) {
-            currentArticles = list;
+            const deleted = getDeletedArticleIds();
+            const localMap = new Map(currentArticles.map((a) => [a.id, a]));
+            const merged = [...currentArticles];
+            for (const sArt of list) {
+              if (deleted.has(sArt.id) || (sArt.slug && deleted.has(sArt.slug))) continue;
+              if (!localMap.has(sArt.id)) {
+                merged.push(sArt);
+                localMap.set(sArt.id, sArt);
+              }
+            }
+            currentArticles = merged;
           }
         }
       } catch (fetchErr) {
