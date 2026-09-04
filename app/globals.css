@@ -128,11 +128,10 @@ h1, h2, h3, h4, h5, h6 {
   content: attr(data-placeholder);
   color: #9CA3AF;
   pointer-events: none;
-  font-style: italic;
+  font-style: normal;
   display: block;
 }
 
-/* Button Utilities according to Reference Spec */
 .btn-primary {
   display: inline-flex;
   align-items: center;

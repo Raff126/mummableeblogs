@@ -447,7 +447,7 @@ export default function AdminNewArticlePage() {
             label="Blog Story & Details"
             value={content}
             onChange={setContent}
-            placeholder="Write your guide, tips, and experiences here... Highlight any brand/product and click 'Link 🔗' to make it clickable!"
+            placeholder="Write your guide, tips, and experiences here..."
           />
         </div>
 

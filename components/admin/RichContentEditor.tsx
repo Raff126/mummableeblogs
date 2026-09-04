@@ -14,7 +14,7 @@ export default function RichContentEditor({
   value,
   onChange,
   label = 'Blog Story & Details',
-  placeholder = 'Write your guide, tips, and experiences here... Highlight any brand/product (e.g. "The Dubai Mall") and click Link 🔗 to make it clickable!',
+  placeholder = 'Write your guide, tips, and experiences here...',
   minHeight = '380px',
 }: RichContentEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
