@@ -136,6 +136,7 @@ export const STORAGE_KEYS = {
   CATEGORIES: 'mummabee_categories',
   AUTH: 'mummabee_auth',
   GOOD_TO_KNOW: 'mummabee_gtk_visibility',
+  ADMIN_EMAILS: 'mummabee_admin_emails',
 };
 
 // Default Fallbacks
@@ -735,7 +736,41 @@ export function saveCategories(cats: Record<string, CategoryInfo>): void {
 }
 
 import { getFirebaseAuth } from '../utils/firebase';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from 'firebase/auth';
+
+export const DEFAULT_ADMIN_EMAILS: string[] = [
+  'raffyolaivar25@gmail.com',
+  'donne@mummabeeblog.com',
+];
+
+export function getAuthorizedAdminEmails(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_ADMIN_EMAILS;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.ADMIN_EMAILS);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return Array.from(
+          new Set([...DEFAULT_ADMIN_EMAILS, ...parsed.map((e: string) => e.trim().toLowerCase())])
+        );
+      }
+    }
+  } catch (_) {}
+  return DEFAULT_ADMIN_EMAILS;
+}
+
+export function saveAuthorizedAdminEmails(emails: string[]): void {
+  if (typeof window === 'undefined') return;
+  const clean = Array.from(
+    new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))
+  );
+  safeSetLocalStorage(STORAGE_KEYS.ADMIN_EMAILS, JSON.stringify(clean));
+}
 
 export function isAuthenticated(): boolean {
   if (typeof window === 'undefined') return false;
@@ -762,6 +797,54 @@ export async function logout(): Promise<void> {
     } catch (_) {}
   }
   setAuthenticated(false);
+}
+
+export async function loginWithGoogle(): Promise<{ success: boolean; email?: string; error?: string }> {
+  const auth = getFirebaseAuth();
+  if (!auth) {
+    return { success: false, error: 'Firebase Auth is not available. Please try again.' };
+  }
+
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const result = await signInWithPopup(auth, provider);
+    const userEmail = result.user?.email?.trim().toLowerCase();
+
+    if (!userEmail) {
+      await signOut(auth);
+      setAuthenticated(false);
+      return { success: false, error: 'Could not retrieve email from Google account.' };
+    }
+
+    const authorizedList = getAuthorizedAdminEmails().map((e) => e.trim().toLowerCase());
+    const isAuthorized = authorizedList.includes(userEmail);
+
+    if (!isAuthorized) {
+      await signOut(auth);
+      setAuthenticated(false);
+      return {
+        success: false,
+        error: `Access Denied: The Google account "${userEmail}" is not authorized to access the MummaBee CMS. Please sign in with an authorized administrator account.`,
+      };
+    }
+
+    setAuthenticated(true);
+    return { success: true, email: userEmail };
+  } catch (err: any) {
+    console.error('Firebase Google sign-in error:', err?.code, err?.message);
+    let errorMsg = err?.message || 'Google sign-in failed. Please try again.';
+    if (err?.code === 'auth/popup-closed-by-user') {
+      errorMsg = 'Sign-in cancelled. The Google popup was closed before completing.';
+    } else if (err?.code === 'auth/popup-blocked') {
+      errorMsg = 'The Google sign-in popup was blocked by your browser. Please allow popups for this site and try again.';
+    } else if (err?.code === 'auth/unauthorized-domain') {
+      errorMsg = 'This domain is not authorized in Firebase Console. Please ensure mummabeeblog.com is added to Authorized Domains in Firebase Authentication.';
+    } else if (err?.code === 'auth/cancelled-popup-request') {
+      errorMsg = 'Another sign-in attempt is already in progress.';
+    }
+    return { success: false, error: errorMsg };
+  }
 }
 
 export async function loginWithFirebase(emailInput: string, passwordInput: string): Promise<{ success: boolean; error?: string }> {
