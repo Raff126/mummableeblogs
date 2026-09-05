@@ -222,24 +222,13 @@ export default function HeroSection() {
               </div>
 
               {/* Authentic Floating MummaBee Verification Badge */}
-              <div className="absolute -bottom-3.5 left-1/2 transform -translate-x-1/2 w-[90%] sm:w-auto bg-white/95 backdrop-blur-md rounded-full px-4 py-2 shadow-[0_8px_24px_rgba(104,56,70,0.15)] border border-[#B75B70]/25 flex items-center justify-center gap-2.5 z-20">
+              <div className="absolute -bottom-3.5 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-md rounded-full px-4 py-2 shadow-[0_8px_24px_rgba(104,56,70,0.15)] border border-[#B75B70]/25 flex items-center justify-center gap-2 z-20 whitespace-nowrap">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#B75B70] animate-pulse shrink-0" />
                 <span className="font-serif text-xs font-bold text-[#683846] whitespace-nowrap">
                   Tested by Donne & Family
                 </span>
-                <span className="hidden sm:inline text-[#B75B70]/50">•</span>
-                <span className="hidden sm:inline font-sans text-[10px] text-[#332D2F]/70 font-medium whitespace-nowrap">
-                  Dubai & Abu Dhabi
-                </span>
               </div>
 
-            </div>
-
-            {/* Trust subtitle */}
-            <div className="mt-6 flex items-center gap-2 text-center text-xs text-[#332D2F]/75">
-              <span className="text-[11px] font-sans text-[#683846]/80 font-medium">
-                Real reviews &amp; advice from a mum raising two girls in the desert
-              </span>
             </div>
           </div>
 
