@@ -20,6 +20,7 @@ const ADMIN_NAV = [
   { label: 'Subscribers', path: '/admin/subscribers', icon: '💌' },
   { label: 'Inquiries', path: '/admin/inquiries', icon: '📬' },
   { label: 'Settings', path: '/admin/settings', icon: '⚙️' },
+  { label: 'System Analytics', path: '/admin/analytics', icon: '📈' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
