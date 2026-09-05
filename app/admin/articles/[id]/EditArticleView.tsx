@@ -59,16 +59,26 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  const getEffectiveArticleId = (): string => {
+    if (articleId && articleId !== '__fallback__') return articleId;
+    if (typeof window !== 'undefined') {
+      const parts = window.location.pathname.replace(/^\/|\/$/g, '').split('/');
+      if (parts.length >= 1) return parts[parts.length - 1];
+    }
+    return articleId;
+  };
+
   useEffect(() => {
     setMediaList(getInitialMedia());
+    const effectiveId = getEffectiveArticleId();
     const deleted = getDeletedArticleIds();
-    if (deleted.has(articleId)) {
+    if (deleted.has(effectiveId)) {
       setArticle(null);
       return;
     }
     const allArticles = getInitialArticles();
-    const found = allArticles.find((a) => a.id === articleId || a.slug === articleId) ||
-                  getAllArticles().filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))).find((a) => a.id === articleId || a.slug === articleId);
+    const found = allArticles.find((a) => a.id === effectiveId || a.slug === effectiveId) ||
+                  getAllArticles().filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))).find((a) => a.id === effectiveId || a.slug === effectiveId);
     if (found) {
       setArticle(found);
       setTitle(found.title);

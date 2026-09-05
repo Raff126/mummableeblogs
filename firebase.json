@@ -36,6 +36,42 @@
       {
         "source": "/api/settings**",
         "destination": "/data/settings.json"
+      },
+      {
+        "source": "/uae-with-kids/**",
+        "destination": "/uae-with-kids/__fallback__/index.html"
+      },
+      {
+        "source": "/family-life/**",
+        "destination": "/family-life/__fallback__/index.html"
+      },
+      {
+        "source": "/food/**",
+        "destination": "/food/__fallback__/index.html"
+      },
+      {
+        "source": "/travel/**",
+        "destination": "/travel/__fallback__/index.html"
+      },
+      {
+        "source": "/school-and-activities/**",
+        "destination": "/school-and-activities/__fallback__/index.html"
+      },
+      {
+        "source": "/brands-we-love/**",
+        "destination": "/brands-we-love/__fallback__/index.html"
+      },
+      {
+        "source": "/the-expat-edit/**",
+        "destination": "/the-expat-edit/__fallback__/index.html"
+      },
+      {
+        "source": "/expat-edit/**",
+        "destination": "/expat-edit/__fallback__/index.html"
+      },
+      {
+        "source": "/admin/articles/**",
+        "destination": "/admin/articles/__fallback__/index.html"
       }
     ],
     "headers": [

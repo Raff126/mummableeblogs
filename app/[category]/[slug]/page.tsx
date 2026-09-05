@@ -38,10 +38,32 @@ export function generateStaticParams() {
     }
   });
 
+  // Always generate native fallback pages for each category to handle dynamic / newly published articles
+  const categories = [
+    'uae-with-kids',
+    'family-life',
+    'food',
+    'travel',
+    'school-and-activities',
+    'brands-we-love',
+    'the-expat-edit',
+    'expat-edit',
+  ];
+  for (const category of categories) {
+    params.push({ category, slug: '__fallback__' });
+  }
+
   return params;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  if (params.slug === '__fallback__') {
+    return {
+      title: 'Guide | MummaBeeBlog',
+      description: 'Discover practical UAE family guides and honest recommendations.',
+    };
+  }
+
   const article = getArticleBySlug(params.slug);
   if (!article) {
     return {
@@ -87,7 +109,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default function ArticlePage({ params }: PageProps) {
-  const initialArticle = getArticleBySlug(params.slug) || null;
+  const initialArticle = params.slug === '__fallback__' ? null : (getArticleBySlug(params.slug) || null);
 
   return (
     <ArticleView

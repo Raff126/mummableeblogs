@@ -17,20 +17,41 @@ interface ArticleViewProps {
 }
 
 export default function ArticleView({ initialArticle, categorySlug, slug }: ArticleViewProps) {
-  const [article, setArticle] = useState<ArticleItem | null>(initialArticle || null);
+  const isFallback = slug === '__fallback__';
+  const [article, setArticle] = useState<ArticleItem | null>(isFallback ? null : (initialArticle || null));
   const [relatedArticles, setRelatedArticles] = useState<ArticleItem[]>([]);
-  const [isLoading, setIsLoading] = useState(!initialArticle);
+  const [isLoading, setIsLoading] = useState(isFallback || !initialArticle);
+
+  // For fallback pages served by Firebase rewrites, extract the real slug from the URL
+  const getEffectiveSlug = (): string => {
+    if (slug && slug !== '__fallback__') return slug;
+    if (typeof window !== 'undefined') {
+      const parts = window.location.pathname.replace(/^\/|\/$/g, '').split('/');
+      if (parts.length >= 2) return parts[parts.length - 1];
+    }
+    return slug;
+  };
+
+  const getEffectiveCategory = (): string => {
+    if (categorySlug && categorySlug !== '__fallback__') return categorySlug;
+    if (typeof window !== 'undefined') {
+      const parts = window.location.pathname.replace(/^\/|\/$/g, '').split('/');
+      if (parts.length >= 1) return parts[0];
+    }
+    return categorySlug;
+  };
 
   const refreshArticle = () => {
-    if (!slug) return;
+    const effectiveSlug = getEffectiveSlug();
+    if (!effectiveSlug) return;
 
-    const normalizedSlug = decodeURIComponent(slug).toLowerCase().trim().replace(/\/$/, '');
+    const normalizedSlug = decodeURIComponent(effectiveSlug).toLowerCase().trim().replace(/\/$/, '');
     const deleted = getDeletedArticleIds();
 
     if (
-      deleted.has(slug) ||
+      deleted.has(effectiveSlug) ||
       deleted.has(normalizedSlug) ||
-      (initialArticle && (deleted.has(initialArticle.id) || (initialArticle.slug && deleted.has(initialArticle.slug))))
+      (!isFallback && initialArticle && (deleted.has(initialArticle.id) || (initialArticle.slug && deleted.has(initialArticle.slug))))
     ) {
       setArticle(null);
       setRelatedArticles([]);
@@ -52,7 +73,7 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
             !deleted.has(a.id) &&
             (!a.slug || !deleted.has(a.slug)) &&
             (encodeURIComponent(a.slug || '').toLowerCase() === normalizedSlug ||
-              a.slug?.toLowerCase() === slug.toLowerCase())
+              a.slug?.toLowerCase() === effectiveSlug.toLowerCase())
         )
       );
     };
@@ -63,6 +84,9 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
 
     if (foundInLocal) {
       setArticle(foundInLocal);
+      if (typeof document !== 'undefined' && foundInLocal.title) {
+        document.title = `${foundInLocal.title} | MummaBeeBlog`;
+      }
       const all = localArticles.length > 0 ? localArticles : getAllArticles();
       const related = all
         .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === foundInLocal.category && a.slug !== foundInLocal.slug && !a.isDraft)
@@ -73,11 +97,14 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
     }
 
     // 2. Check initialArticle if already matching and not deleted
-    if (initialArticle && !deleted.has(initialArticle.id) && (!initialArticle.slug || !deleted.has(initialArticle.slug)) && (
+    if (!isFallback && initialArticle && !deleted.has(initialArticle.id) && (!initialArticle.slug || !deleted.has(initialArticle.slug)) && (
       initialArticle.slug?.toLowerCase().trim().replace(/\/$/, '') === normalizedSlug ||
       initialArticle.id?.toLowerCase().trim() === normalizedSlug
     )) {
       setArticle(initialArticle);
+      if (typeof document !== 'undefined' && initialArticle.title) {
+        document.title = `${initialArticle.title} | MummaBeeBlog`;
+      }
       const all = getAllArticles();
       const related = all
         .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === initialArticle.category && a.slug !== initialArticle.slug && !a.isDraft)
