@@ -128,32 +128,7 @@ export default function WorkWithUsView() {
         </div>
       </section>
 
-      {/* Media Kit CTA Section */}
-      <section className="py-20 bg-[#F8EDEF] border-t border-[#B75B70]/15">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 text-center">
-          <h2 className="font-serif text-3xl font-bold text-[#683846]">
-            Let's Create Something Memorable
-          </h2>
-          <p className="text-sm sm:text-base text-[#332D2F] max-w-xl mx-auto leading-relaxed whitespace-pre-line">
-            {content.mediaKitNote}
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-            <a
-              href={`mailto:${content.ctaEmail}?subject=Partnership%20Inquiry%20-%20MummaBeeBlog`}
-              className="btn-primary"
-            >
-              Discuss a Partnership
-            </a>
-            <a
-              href={`mailto:${content.ctaEmail}?subject=Media%20Kit%20Request%20-%20MummaBeeBlog`}
-              className="px-6 py-3 rounded-full bg-white text-[#683846] font-bold text-xs hover:bg-[#F8EDEF] transition-colors border border-[#B75B70]/30 shadow-2xs"
-            >
-              Request Media Kit ↗
-            </a>
-          </div>
-        </div>
-      </section>
-
+      {/* Newsletter Section */}
       <NewsletterBand />
     </>
   );
