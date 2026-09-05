@@ -45,97 +45,104 @@ export default function HeroSection() {
   }, []);
 
   const headline = content.heroHeadline || DEFAULT_HOMEPAGE.heroHeadline;
-  const isDefaultHeadline = headline.trim() === 'Your guide to family life in the UAE.';
+  const isDefaultHeadline = !headline || headline.trim() === 'Your guide to family life in the UAE.' || headline.includes('family life');
 
   return (
-    <section className="relative bg-[#F8EDEF] overflow-hidden py-10 sm:py-16 lg:py-20 border-b border-[#B75B70]/15">
-      {/* Sample 3 Subtle Family Doodles Background Pattern (4% opacity) */}
-      <div 
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none opacity-[0.045] bg-repeat"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 15l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6zM85 70l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zM90 20c0 5-4 9-9 9s-9-4-9-9 4-9 9-9 9 4 9 9zM30 85c-4 0-8 3-8 7s4 7 8 7 8-3 8-7-4-7-8-7zM60 45a6 6 0 1 0 0-12 6 6 0 0 0 0 12z' fill='%23683846' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-        }}
-      />
-
-      {/* Organic Curved Wave Backdrop flowing behind the circle (Sample 3 style) */}
-      <div 
-        aria-hidden="true"
-        className="absolute top-0 right-0 w-[55%] h-full bg-gradient-to-bl from-[#FAF3EC]/90 via-[#F3DEE3]/70 to-transparent rounded-bl-[200px] lg:rounded-bl-[320px] pointer-events-none"
-      />
-
-      {/* Signature Ambient Circles matching brand */}
+    <section className="relative bg-[#F8EDEF] overflow-hidden py-10 sm:py-14 lg:py-20 border-b border-[#B75B70]/15">
+      {/* Signature Ambient Blush Circles */}
       <div 
         aria-hidden="true"
         className="absolute -bottom-24 -left-24 w-88 h-88 sm:w-96 sm:h-96 bg-[#EAD4D0]/80 rounded-full pointer-events-none" 
       />
       <div 
         aria-hidden="true"
-        className="absolute -top-20 -right-20 w-80 h-80 sm:w-96 sm:h-96 bg-white/45 rounded-full pointer-events-none" 
+        className="absolute -top-20 -right-20 w-80 h-80 sm:w-96 sm:h-96 bg-white/50 rounded-full pointer-events-none" 
       />
 
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 sm:gap-12 lg:gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 sm:gap-12 lg:gap-14 items-center">
           
-          {/* Left Column: Typography & CTAs (inspired by Sample 3: "Play, Learn and Grow, Together..") */}
-          <div className="lg:col-span-7 space-y-5 text-left">
-            {/* Eyebrow tag */}
-            <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-[#B75B70]/25 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-[#B75B70] animate-pulse" />
+          {/* Left Column: Editorial Typography, CTAs & Proof Stats */}
+          <div className="lg:col-span-7 space-y-4 sm:space-y-5 text-left">
+            {/* Eyebrow badge */}
+            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-[#B75B70]/20 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-[#B75B70]" />
               <span className="text-[10px] sm:text-[11px] font-sans font-bold tracking-widest text-[#B75B70] uppercase">
                 {content.heroEyebrow || 'UAE FAMILY LIFE • FOOD • TRAVEL • ACTIVITIES'}
               </span>
             </div>
 
-            {/* Headline with Sample 3 dual rhythm */}
-            <h1 className="font-serif text-3xl sm:text-5xl lg:text-[56px] xl:text-[62px] font-bold text-[#683846] leading-[1.1] tracking-tight">
+            {/* Signature Headline */}
+            <h1 className="font-serif text-3xl sm:text-5xl lg:text-[54px] xl:text-[58px] font-bold text-[#683846] leading-[1.14] tracking-tight">
               {isDefaultHeadline ? (
                 <>
-                  <span className="block text-2xl sm:text-4xl lg:text-[46px] font-sans font-bold text-[#683846]">
-                    Discover, Explore &amp;
-                  </span>
-                  <span className="block font-serif text-[#B75B70] mt-1">
-                    Family Life, <span className="text-[#683846] font-normal italic">Together.</span>
-                  </span>
+                  Your guide to<br />
+                  <span className="font-serif italic font-normal text-[#B75B70]">family life</span><br />
+                  in the UAE.
                 </>
               ) : (
                 <span>{headline}</span>
               )}
             </h1>
 
+            {/* Sub-badge: Dubai & Abu Dhabi • Honest Family Recommendations */}
+            <div className="flex items-center gap-2 text-xs sm:text-[13px] font-medium text-[#B75B70]">
+              <span className="w-2 h-2 rounded-full bg-[#D4A373] shrink-0" />
+              <span className="font-semibold text-[#683846]">Dubai &amp; Abu Dhabi</span>
+              <span className="text-[#B75B70]/50">•</span>
+              <span className="text-[#B75B70]">Honest Family Recommendations</span>
+            </div>
+
             {/* Supporting Description */}
-            <p className="font-sans text-xs sm:text-sm md:text-base text-[#332D2F]/85 leading-relaxed max-w-xl font-normal">
+            <p className="font-sans text-xs sm:text-sm md:text-[15px] text-[#332D2F]/80 leading-relaxed max-w-lg font-normal">
               {content.heroDescription ||
                 'Discover family-friendly places, practical guides, honest recommendations and real experiences between Dubai and Abu Dhabi.'}
             </p>
 
-            {/* CTA Buttons (Sample 3 style: Filled burgundy button + Outline button) */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-1 w-full sm:w-auto">
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1 w-full sm:w-auto">
               <Link
                 href={content.heroPrimaryCtaUrl || "/uae-with-kids"}
-                className="group inline-flex items-center justify-center gap-2.5 bg-[#683846] hover:bg-[#522b37] text-white text-xs sm:text-[13px] font-bold tracking-wider uppercase px-8 py-3.5 rounded-full shadow-[0_8px_20px_rgba(104,56,70,0.22)] hover:shadow-[0_12px_28px_rgba(104,56,70,0.32)] transition-all transform hover:-translate-y-0.5 text-center"
+                className="group inline-flex items-center justify-center gap-2 bg-[#683846] hover:bg-[#522b37] text-white text-xs sm:text-[13px] font-bold tracking-wider uppercase px-8 py-3.5 rounded-full shadow-[0_8px_20px_rgba(104,56,70,0.22)] hover:shadow-[0_12px_28px_rgba(104,56,70,0.32)] transition-all transform hover:-translate-y-0.5 text-center"
               >
                 <span>{content.heroPrimaryCtaText || 'EXPLORE UAE GUIDES'}</span>
-                <svg
-                  className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                <span aria-hidden="true" className="transform group-hover:translate-x-1 transition-transform">→</span>
               </Link>
 
               <Link
                 href={content.heroSecondaryCtaUrl || "/about"}
-                className="inline-flex items-center justify-center gap-2 bg-transparent hover:bg-white/80 text-[#683846] hover:text-[#522b37] text-xs sm:text-[13px] font-bold tracking-wider uppercase px-8 py-3.5 rounded-full border-2 border-[#683846]/30 hover:border-[#683846] transition-all transform hover:-translate-y-0.5 text-center shadow-xs"
+                className="inline-flex items-center justify-center bg-white hover:bg-[#F8EDEF] text-[#683846] text-xs sm:text-[13px] font-bold tracking-wider uppercase px-8 py-3.5 rounded-full border border-[#B75B70]/30 shadow-xs hover:border-[#683846]/40 transition-all transform hover:-translate-y-0.5 text-center"
               >
                 <span>{content.heroSecondaryCtaText || 'MEET MUMMA BEE'}</span>
               </Link>
             </div>
 
+            {/* 3-Column Proof Stats Strip */}
+            <div className="pt-4 flex items-center gap-6 sm:gap-10 border-t border-[#B75B70]/15">
+              <div>
+                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">100+</div>
+                <div className="text-[10px] sm:text-[11px] font-sans font-bold tracking-wider text-[#332D2F]/60 uppercase mt-0.5">
+                  TESTED GUIDES
+                </div>
+              </div>
+              <div className="w-px h-8 bg-[#B75B70]/15 hidden sm:block" />
+              <div>
+                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">2 Cities</div>
+                <div className="text-[10px] sm:text-[11px] font-sans font-bold tracking-wider text-[#332D2F]/60 uppercase mt-0.5">
+                  DUBAI &amp; ABU DHABI
+                </div>
+              </div>
+              <div className="w-px h-8 bg-[#B75B70]/15 hidden sm:block" />
+              <div>
+                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">100%</div>
+                <div className="text-[10px] sm:text-[11px] font-sans font-bold tracking-wider text-[#332D2F]/60 uppercase mt-0.5">
+                  HONEST REVIEWS
+                </div>
+              </div>
+            </div>
+
             {/* Popular Topics Quick Links */}
-            <div className="pt-2 sm:pt-3">
+            <div className="pt-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] font-sans font-bold tracking-wider text-[#683846]/70 uppercase mr-1">
                   POPULAR NOW:
@@ -167,43 +174,61 @@ export default function HeroSection() {
               </div>
             </div>
 
-            {/* Social Follow Strip */}
-            <div className="pt-3 border-t border-[#B75B70]/15 flex items-center gap-4 text-xs text-[#332D2F]/75">
-              <span className="text-[11px] font-medium tracking-wide">Follow our journey:</span>
-              <a
-                href={SOCIAL_LINKS.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[#B75B70] hover:text-[#683846] font-semibold transition-colors"
-              >
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                </svg>
-                <span>@mummabeeblog</span>
-              </a>
-            </div>
           </div>
 
-          {/* Right Column: Circular Portal with Date Burgundy Crescent Ring (Directly inspired by Sample 3) */}
+          {/* Right Column: Arched Portrait Portal with Badges & Playful Doodles */}
           <div className="lg:col-span-5 flex flex-col justify-center items-center relative py-6 lg:py-4">
-            <div className="relative w-full max-w-[340px] sm:max-w-[420px] lg:max-w-[450px]">
+            <div className="relative w-full max-w-[340px] sm:max-w-[400px] lg:max-w-[430px]">
               
-              {/* Sample 3 Crescent Ring Arc: Rich Date Burgundy & Mumma Rose framing the left curve */}
+              {/* Playful Doodles */}
+              {/* 1. Golden 4-point sparkle star above arch */}
+              <svg 
+                aria-hidden="true" 
+                className="absolute -top-5 left-10 sm:-top-7 sm:left-14 w-6 h-6 sm:w-7 sm:h-7 text-[#D4A373] pointer-events-none z-20" 
+                viewBox="0 0 24 24" 
+                fill="currentColor"
+              >
+                <path d="M12 0L14.2 9.8L24 12L14.2 14.2L12 24L9.8 14.2L0 12L9.8 9.8L12 0Z" />
+              </svg>
+
+              {/* 2. Squiggly rose doodle line on left */}
+              <svg 
+                aria-hidden="true" 
+                className="absolute top-1/3 -left-6 sm:-left-8 w-8 h-8 sm:w-10 sm:h-10 text-[#B75B70]/70 pointer-events-none z-20" 
+                viewBox="0 0 40 40" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round"
+              >
+                <path d="M5 28C10 24 12 12 20 20C26 26 30 10 36 16" />
+              </svg>
+
+              {/* 3. Starburst sparkle doodle at bottom-right */}
+              <svg 
+                aria-hidden="true" 
+                className="absolute -bottom-3 -right-3 sm:-bottom-5 sm:-right-5 w-8 h-8 sm:w-10 sm:h-10 text-[#B75B70]/60 pointer-events-none z-20" 
+                viewBox="0 0 32 32" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round"
+              >
+                <line x1="16" y1="2" x2="16" y2="30" />
+                <line x1="2" y1="16" x2="30" y2="16" />
+                <line x1="6" y1="6" x2="26" y2="26" />
+                <line x1="6" y1="26" x2="26" y2="6" />
+              </svg>
+
+              {/* Outer delicate golden / rose framing outline */}
               <div 
                 aria-hidden="true"
-                className="absolute -inset-3 sm:-inset-4 rounded-full border-[10px] sm:border-[14px] border-[#683846] border-r-transparent -rotate-12 pointer-events-none transition-transform duration-500 hover:-rotate-6"
+                className="absolute -inset-2.5 sm:-inset-3.5 rounded-t-[160px] sm:rounded-t-[190px] rounded-b-[40px] sm:rounded-b-[48px] border-2 border-[#D4A373]/40 pointer-events-none"
               />
 
-              {/* Secondary delicate rose crescent accent */}
+              {/* Main Arched Frame */}
               <div 
-                aria-hidden="true"
-                className="absolute -inset-1.5 sm:-inset-2 rounded-full border-[4px] border-[#B75B70]/40 border-l-transparent rotate-45 pointer-events-none"
-              />
-
-              {/* Main Circular Portal framing Donne & her daughters */}
-              {/* 1:1 Aspect ratio inside rounded-full: Donne in center-top, both girls beside her */}
-              <div 
-                className="relative aspect-square w-full rounded-full overflow-hidden bg-white shadow-[0_20px_50px_rgba(104,56,70,0.18)] border-6 sm:border-8 border-white transition-all duration-300 group"
+                className="relative aspect-[4/5] w-full rounded-t-[150px] sm:rounded-t-[180px] rounded-b-[36px] sm:rounded-b-[44px] overflow-hidden bg-white shadow-[0_20px_50px_rgba(104,56,70,0.18)] border-6 sm:border-8 border-white group"
               >
                 <img
                   src={content.heroImage || "/images/358792494_661391199240576_3424351230899219709_n.jpg"}
@@ -221,14 +246,42 @@ export default function HeroSection() {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#683846]/20 via-transparent to-transparent opacity-30 pointer-events-none" />
               </div>
 
-              {/* Authentic Floating MummaBee Verification Badge */}
-              <div className="absolute -bottom-3.5 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-md rounded-full px-4 py-2 shadow-[0_8px_24px_rgba(104,56,70,0.15)] border border-[#B75B70]/25 flex items-center justify-center gap-2 z-20 whitespace-nowrap">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#B75B70] animate-pulse shrink-0" />
-                <span className="font-serif text-xs font-bold text-[#683846] whitespace-nowrap">
-                  Tested by Donne & Family
+              {/* Floating Top-Right Tag: DUBAI & BEYOND */}
+              <div className="absolute top-4 -right-2 sm:top-6 sm:-right-4 bg-white/95 backdrop-blur-md rounded-full px-3.5 py-1.5 shadow-[0_4px_16px_rgba(104,56,70,0.14)] border border-[#B75B70]/20 flex items-center gap-1.5 z-20">
+                <span className="w-2 h-2 rounded-full bg-[#E5A83B]" />
+                <span className="font-sans text-[10px] sm:text-[11px] font-bold tracking-wider text-[#683846] uppercase whitespace-nowrap">
+                  DUBAI &amp; BEYOND
                 </span>
               </div>
 
+              {/* Floating Bottom Badge: Tested by Donne & Family • 100% Real Reviews */}
+              <div className="absolute -bottom-3.5 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-md rounded-full px-4 py-2 shadow-[0_8px_24px_rgba(104,56,70,0.15)] border border-[#B75B70]/25 flex items-center justify-center gap-2 z-20 whitespace-nowrap">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#B75B70] animate-pulse shrink-0" />
+                <span className="font-serif text-xs font-bold text-[#683846] whitespace-nowrap">
+                  Tested by Donne &amp; Family
+                </span>
+                <span className="text-[#B75B70]/50">•</span>
+                <span className="font-sans text-[11px] text-[#332D2F]/70 font-medium whitespace-nowrap">
+                  100% Real Reviews
+                </span>
+              </div>
+
+            </div>
+
+            {/* Social Follow Strip below portrait */}
+            <div className="mt-6 flex items-center gap-2 text-xs text-[#332D2F]/75">
+              <span className="text-[11px] font-medium tracking-wide">Follow our adventures:</span>
+              <a
+                href={SOCIAL_LINKS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[#B75B70] hover:text-[#683846] font-semibold transition-colors"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                </svg>
+                <span>@mummabeeblog</span>
+              </a>
             </div>
           </div>
 
