@@ -34,21 +34,28 @@ export default function AdminMediaPage() {
       const filename = filenameHint || (typeof fileOrDataUrl !== 'string' ? fileOrDataUrl.name : `image-${Date.now()}.jpg`);
       
       let finalUrl = dataUrl;
-      try {
-        const uploadRes = await fetch('/api/upload/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            image: dataUrl,
-            filename: filename,
-          }),
-        });
-        if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          if (data.url) finalUrl = data.url;
+      const isLocalhost = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '0.0.0.0'
+      );
+      if (isLocalhost) {
+        try {
+          const uploadRes = await fetch('/api/upload/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image: dataUrl,
+              filename: filename,
+            }),
+          });
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            if (data.url) finalUrl = data.url;
+          }
+        } catch (err) {
+          console.warn('Server upload fallback:', err);
         }
-      } catch (err) {
-        console.warn('Server upload fallback:', err);
       }
 
       const newItem: MediaItem = {

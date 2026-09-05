@@ -75,23 +75,30 @@ export default function AdminNewArticlePage() {
       // Compress and resize image to prevent storage errors
       const compressedDataUrl = await compressImage(file, 1200, 1200, 0.82);
       
-      // Upload to server to get permanent /uploads/ file URL
+      // Upload to server to get permanent /uploads/ file URL when running locally
       let finalUrl = compressedDataUrl;
-      try {
-        const uploadRes = await fetch('/api/upload/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            image: compressedDataUrl,
-            filename: file.name,
-          }),
-        });
-        if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          if (data.url) finalUrl = data.url;
+      const isLocalhost = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '0.0.0.0'
+      );
+      if (isLocalhost) {
+        try {
+          const uploadRes = await fetch('/api/upload/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image: compressedDataUrl,
+              filename: file.name,
+            }),
+          });
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            if (data.url) finalUrl = data.url;
+          }
+        } catch (uploadErr) {
+          console.warn('Server upload fallback:', uploadErr);
         }
-      } catch (uploadErr) {
-        console.warn('Server upload fallback:', uploadErr);
       }
 
       setFeaturedImage(finalUrl);

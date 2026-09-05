@@ -46,6 +46,16 @@ export default function ImageInputWithPaste({
   }, []);
 
   const uploadToServer = async (dataUrlOrFile: string | File, filenameHint?: string): Promise<string> => {
+    const isLocalhost = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '0.0.0.0'
+    );
+    if (!isLocalhost) {
+      // In production static export, use client-side optimized data URL directly
+      return typeof dataUrlOrFile === 'string' ? dataUrlOrFile : '';
+    }
+
     try {
       if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:image/')) {
         const res = await fetch('/api/upload/', {
