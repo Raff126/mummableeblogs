@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import AboutView from './AboutView';
-import { ARTICLES } from '../../data/articles';
+import { getAllArticles } from '../../data/articles';
 
 export const metadata: Metadata = {
   title: "About Donne — The Mum Behind MummaBeeBlog",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  const topGuides = ARTICLES.slice(0, 4);
+  const topGuides = getAllArticles().filter((a) => !a.isDraft).slice(0, 4);
 
   return <AboutView topGuides={topGuides} />;
 }

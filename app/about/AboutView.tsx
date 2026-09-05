@@ -4,12 +4,21 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import NewsletterBand from '../../components/NewsletterBand';
 import GuideCard from '../../components/GuideCard';
-import { Article } from '../../data/articles';
-import { getInitialAbout, getInitialHomepage, DEFAULT_ABOUT, AboutPageContent, STORAGE_KEYS } from '../../data/store';
+import { Article, getAllArticles } from '../../data/articles';
+import {
+  getInitialAbout,
+  getInitialHomepage,
+  DEFAULT_ABOUT,
+  AboutPageContent,
+  STORAGE_KEYS,
+  getInitialArticles,
+  getDeletedArticleIds,
+} from '../../data/store';
 
-export default function AboutView({ topGuides }: { topGuides: Article[] }) {
+export default function AboutView({ topGuides: initialTopGuides }: { topGuides: Article[] }) {
   const [content, setContent] = useState<AboutPageContent>(DEFAULT_ABOUT);
   const [imgSrc, setImgSrc] = useState<string>('');
+  const [guides, setGuides] = useState<Article[]>(initialTopGuides || []);
 
   const loadLatest = () => {
     const localAbout = getInitialAbout();
@@ -17,6 +26,15 @@ export default function AboutView({ topGuides }: { topGuides: Article[] }) {
     const resolvedImage = localAbout.profileImage || localHp.donneImage || DEFAULT_ABOUT.profileImage;
     setContent(localAbout);
     setImgSrc(resolvedImage);
+
+    // Dynamically filter deleted articles and load latest active articles
+    const deleted = getDeletedArticleIds();
+    const localArticles = getInitialArticles();
+    const all = localArticles.length > 0 ? localArticles : getAllArticles();
+    const published = all.filter(
+      (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && !a.isDraft
+    );
+    setGuides(published.slice(0, 4));
 
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const endpoint = isLocal ? `/api/about/?t=${Date.now()}` : `/data/about.json?t=${Date.now()}`;
@@ -55,10 +73,12 @@ export default function AboutView({ topGuides }: { topGuides: Article[] }) {
 
     window.addEventListener('mummabee_content_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
 
     return () => {
       window.removeEventListener('mummabee_content_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
     };
   }, []);
 
@@ -163,7 +183,7 @@ export default function AboutView({ topGuides }: { topGuides: Article[] }) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {topGuides.map((article) => (
+              {guides.map((article) => (
                 <GuideCard key={article.id} article={article} />
               ))}
             </div>
