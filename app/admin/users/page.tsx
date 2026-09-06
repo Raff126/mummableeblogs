@@ -206,18 +206,8 @@ export default function AdminUsersPage() {
           Admin ({currentAdmin?.name || 'admin'})
         </div>
 
-        {/* Right Badges */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          <span className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-300 rounded-lg bg-emerald-50">
-            Incentives: $0.00
-          </span>
-          <span className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 border border-rose-300 rounded-lg bg-rose-50">
-            Penalties: $0.00
-          </span>
-          <span className="px-2.5 py-1 text-[11px] font-semibold text-[#683846] border border-[#B75B70]/30 rounded-lg bg-[#F8EDEF] hidden sm:inline-block">
-            Tasks: 0/5
-          </span>
-        </div>
+        {/* Right Empty Spacer to keep center balanced */}
+        <div className="w-7"></div>
       </div>
 
       {/* Notifications */}
