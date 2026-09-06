@@ -215,38 +215,6 @@ export default function AdminLoginPage() {
               <span>Sign In to CMS</span>
             )}
           </button>
-
-          {/* Quick Demo Test Accounts Box */}
-          <div className="pt-2 border-t border-gray-100 space-y-2">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block text-center">
-              Quick Role Testing Shortcuts:
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('donne@mummabeeblog.com');
-                  setPassword('MummaBee2026!');
-                  setError('');
-                }}
-                className="p-2 bg-[#F8EDEF] hover:bg-[#683846] hover:text-white text-[#683846] rounded-xl text-[10px] font-bold transition-all text-center border border-[#B75B70]/20 cursor-pointer"
-              >
-                👑 Admin (Full Access)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('assistant@mummabeeblog.com');
-                  setPassword('Assistant2026!');
-                  setError('');
-                }}
-                className="p-2 bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 rounded-xl text-[10px] font-bold transition-all text-center border border-amber-200 cursor-pointer"
-              >
-                🛡️ Assistant (Restricted)
-              </button>
-            </div>
-          </div>
         </form>
 
         <div className="pt-2 border-t border-gray-100">
