@@ -188,55 +188,55 @@ export default function AdminAnalyticsPage() {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-gray-400">
+      <div className="flex items-center justify-center min-h-[400px] text-[#B75B70]">
         <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs">Loading analytics data...</span>
+          <div className="w-8 h-8 border-2 border-[#B75B70] border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs text-[#332D2F]/60">Loading analytics data...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full bg-[#0B111E] text-slate-100 rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-800/80 font-sans space-y-6">
+    <div className="w-full bg-white text-[#332D2F] rounded-3xl p-5 sm:p-7 shadow-md border border-[#B75B70]/15 font-sans space-y-6">
       
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#B75B70]/10">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-              <span>System Analytics &amp; Insights</span>
+            <h1 className="text-xl sm:text-2xl font-serif font-bold tracking-tight text-[#683846] flex items-center gap-2.5">
+              <span>System Analytics & Insights</span>
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#683846]/10 text-[#683846] border border-[#683846]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#683846] animate-pulse" />
               Live Tracking
             </span>
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[#332D2F]/50">
             Real-time telemetry of visitor traffic, geographical locations, devices, and page activity.
           </p>
         </div>
 
         {/* Range Selector & Actions */}
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200">
-            <span className="text-slate-400 mr-2 text-[11px]">Range:</span>
+          <div className="flex items-center bg-[#F8EDEF] border border-[#B75B70]/20 rounded-xl px-3 py-1.5 text-xs text-[#332D2F]">
+            <span className="text-[#332D2F]/50 mr-2 text-[11px]">Range:</span>
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value as any)}
-              className="bg-transparent text-white font-medium focus:outline-none cursor-pointer text-xs"
+              className="bg-transparent text-[#683846] font-medium focus:outline-none cursor-pointer text-xs"
             >
-              <option value="today" className="bg-slate-900 text-white">Today</option>
-              <option value="7d" className="bg-slate-900 text-white">Last 7 Days</option>
-              <option value="30d" className="bg-slate-900 text-white">Last 30 Days</option>
-              <option value="all" className="bg-slate-900 text-white">All Time</option>
+              <option value="today">Today</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+              <option value="all">All Time</option>
             </select>
           </div>
 
           <button
             onClick={loadSummary}
             disabled={isRefreshing}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-semibold text-slate-200 rounded-xl border border-slate-700 transition-all flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-[#683846] hover:bg-[#522b37] active:scale-95 text-xs font-semibold text-white rounded-xl border border-[#683846] transition-all flex items-center gap-1.5 cursor-pointer"
             title="Refresh analytics data"
           >
             <span className={isRefreshing ? 'animate-spin' : ''}>🔄</span>
@@ -245,96 +245,96 @@ export default function AdminAnalyticsPage() {
         </div>
       </div>
 
-      {/* 4 Metric KPI Cards (Matching Screenshot) */}
+      {/* 4 Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Unique Visitors */}
-        <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-4 sm:p-5 flex items-start justify-between shadow-soft hover:border-slate-700 transition-colors">
+        <div className="bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-4 sm:p-5 flex items-start justify-between hover:border-[#B75B70]/30 transition-colors">
           <div className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#332D2F]/50">
               UNIQUE VISITORS
             </span>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-[#683846] tracking-tight">
               {data.uniqueVisitors}
             </div>
-            <div className="text-xs font-medium text-rose-400">
+            <div className="text-xs font-medium text-[#B75B70]">
               {data.uniqueVisitorsChange}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-center text-purple-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-[#683846]/10 border border-[#683846]/20 flex items-center justify-center text-[#683846] text-lg">
             👥
           </div>
         </div>
 
         {/* Card 2: Total Viewers (Pageviews) */}
-        <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-4 sm:p-5 flex items-start justify-between shadow-soft hover:border-slate-700 transition-colors">
+        <div className="bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-4 sm:p-5 flex items-start justify-between hover:border-[#B75B70]/30 transition-colors">
           <div className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#332D2F]/50">
               TOTAL VIEWERS (PAGEVIEWS)
             </span>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-[#683846] tracking-tight">
               {data.pageviews}
             </div>
-            <div className="text-xs font-medium text-emerald-400">
+            <div className="text-xs font-medium text-[#B75B70]">
               {data.pageviewsChange}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-[#B75B70]/10 border border-[#B75B70]/20 flex items-center justify-center text-[#B75B70] text-lg">
             👁️
           </div>
         </div>
 
         {/* Card 3: Average Retention */}
-        <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-4 sm:p-5 flex items-start justify-between shadow-soft hover:border-slate-700 transition-colors">
+        <div className="bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-4 sm:p-5 flex items-start justify-between hover:border-[#B75B70]/30 transition-colors">
           <div className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#332D2F]/50">
               AVERAGE RETENTION (DAY 1)
             </span>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-[#683846] tracking-tight">
               {data.avgRetention}%
             </div>
-            <div className="text-xs font-medium text-amber-400">
+            <div className="text-xs font-medium text-[#D7BB91]">
               Healthy retention
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-[#D7BB91]/15 border border-[#D7BB91]/25 flex items-center justify-center text-[#D7BB91] text-lg">
             ⏱️
           </div>
         </div>
 
         {/* Card 4: Order Conversion / Deals Clicked */}
-        <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-4 sm:p-5 flex items-start justify-between shadow-soft hover:border-slate-700 transition-colors">
+        <div className="bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-4 sm:p-5 flex items-start justify-between hover:border-[#B75B70]/30 transition-colors">
           <div className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#332D2F]/50">
               ORDER CONVERSION RATE
             </span>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-[#683846] tracking-tight">
               {data.conversionRate.toFixed(2)}%
             </div>
-            <div className="text-xs font-medium text-slate-400">
+            <div className="text-xs font-medium text-[#332D2F]/40">
               0 orders placed
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-[#683846]/10 border border-[#683846]/20 flex items-center justify-center text-[#683846] text-lg">
             💲
           </div>
         </div>
       </div>
 
       {/* Main Chart: Traffic Trend (Pageviews & Unique Visitors) */}
-      <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-5 shadow-soft">
+      <div className="bg-white border border-[#B75B70]/10 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h2 className="text-sm sm:text-base font-bold text-white">
+          <h2 className="text-sm sm:text-base font-bold text-[#683846]">
             Traffic Trend (Pageviews &amp; Unique Visitors)
           </h2>
 
           {/* Legend */}
           <div className="flex items-center gap-5 text-xs">
-            <div className="flex items-center gap-2 text-emerald-400 font-medium">
-              <span className="w-3.5 h-1 rounded-full bg-emerald-400" />
+            <div className="flex items-center gap-2 text-[#B75B70] font-medium">
+              <span className="w-3.5 h-1 rounded-full bg-[#B75B70]" />
               <span>Pageviews</span>
             </div>
-            <div className="flex items-center gap-2 text-purple-400 font-medium">
-              <span className="w-3.5 h-1 rounded-full bg-purple-400" />
+            <div className="flex items-center gap-2 text-[#683846] font-medium">
+              <span className="w-3.5 h-1 rounded-full bg-[#683846]" />
               <span>Unique Visitors</span>
             </div>
           </div>
@@ -349,13 +349,13 @@ export default function AdminAnalyticsPage() {
                 className="w-full h-auto overflow-visible select-none"
               >
                 <defs>
-                  <linearGradient id="emeraldGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.32" />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                  <linearGradient id="plumGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#B75B70" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#B75B70" stopOpacity="0.0" />
                   </linearGradient>
-                  <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.0" />
+                  <linearGradient id="deepPlumGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#683846" stopOpacity="0.20" />
+                    <stop offset="100%" stopColor="#683846" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
@@ -369,14 +369,16 @@ export default function AdminAnalyticsPage() {
                         y1={y}
                         x2={chartConfig.width - chartConfig.paddingX}
                         y2={y}
-                        stroke="#1E293B"
+                        stroke="#B75B70"
                         strokeWidth="1"
+                        strokeOpacity="0.1"
                         strokeDasharray={v === 0 ? 'none' : '4 4'}
                       />
                       <text
                         x={chartConfig.paddingX - 10}
                         y={y + 3.5}
-                        fill="#64748B"
+                        fill="#332D2F"
+                        fillOpacity="0.35"
                         fontSize="9"
                         textAnchor="end"
                         fontFamily="sans-serif"
@@ -388,21 +390,21 @@ export default function AdminAnalyticsPage() {
                 })}
 
                 {/* Shaded Areas */}
-                <path d={chartConfig.area1} fill="url(#emeraldGradient)" />
-                <path d={chartConfig.area2} fill="url(#purpleGradient)" />
+                <path d={chartConfig.area1} fill="url(#plumGradient)" />
+                <path d={chartConfig.area2} fill="url(#deepPlumGradient)" />
 
                 {/* Lines */}
                 <path
                   d={chartConfig.path1}
                   fill="none"
-                  stroke="#10B981"
+                  stroke="#B75B70"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                 />
                 <path
                   d={chartConfig.path2}
                   fill="none"
-                  stroke="#8B5CF6"
+                  stroke="#683846"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                 />
@@ -441,7 +443,7 @@ export default function AdminAnalyticsPage() {
                         cx={p.x}
                         cy={p.y}
                         r="3.5"
-                        fill="#10B981"
+                        fill="#B75B70"
                         className="transition-transform group-hover:scale-150"
                       />
 
@@ -450,7 +452,7 @@ export default function AdminAnalyticsPage() {
                         cx={p2.x}
                         cy={p2.y}
                         r="3"
-                        fill="#8B5CF6"
+                        fill="#683846"
                         className="transition-transform group-hover:scale-150"
                       />
 
@@ -459,7 +461,8 @@ export default function AdminAnalyticsPage() {
                         <text
                           x={p.x}
                           y={chartConfig.height - 8}
-                          fill="#64748B"
+                          fill="#332D2F"
+                          fillOpacity="0.35"
                           fontSize="9"
                           textAnchor="middle"
                           fontFamily="sans-serif"
@@ -475,21 +478,21 @@ export default function AdminAnalyticsPage() {
               {/* Tooltip on hover */}
               {hoveredPoint && (
                 <div
-                  className="absolute z-30 pointer-events-none bg-slate-900 border border-slate-700 shadow-xl rounded-xl px-3 py-2 text-xs text-white"
+                  className="absolute z-30 pointer-events-none bg-white border border-[#B75B70]/20 shadow-xl rounded-xl px-3 py-2 text-xs text-[#332D2F]"
                   style={{
                     left: `${(hoveredPoint.x / chartConfig.width) * 100}%`,
                     top: '20px',
                     transform: 'translateX(-50%)',
                   }}
                 >
-                  <div className="font-semibold text-slate-300 border-b border-slate-700 pb-1 mb-1 text-[11px]">
+                  <div className="font-semibold text-[#683846] border-b border-[#B75B70]/10 pb-1 mb-1 text-[11px]">
                     {hoveredPoint.label}
                   </div>
-                  <div className="flex items-center gap-2 text-emerald-400 text-xs">
+                  <div className="flex items-center gap-2 text-[#B75B70] text-xs">
                     <span>Pageviews:</span>
                     <span className="font-bold">{hoveredPoint.pageviews}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-purple-400 text-xs">
+                  <div className="flex items-center gap-2 text-[#683846] text-xs">
                     <span>Unique Visitors:</span>
                     <span className="font-bold">{hoveredPoint.visitors}</span>
                   </div>
@@ -501,71 +504,71 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto text-xs font-medium">
+      <div className="flex items-center gap-2 border-b border-[#B75B70]/10 pb-2 overflow-x-auto text-xs font-medium">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all ${
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
             activeTab === 'overview'
-              ? 'bg-slate-800 text-white font-semibold'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              ? 'bg-[#683846] text-white font-semibold'
+              : 'text-[#332D2F]/50 hover:text-[#683846] hover:bg-[#F8EDEF]'
           }`}
         >
           📊 Retention &amp; Countries
         </button>
         <button
           onClick={() => setActiveTab('pages')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all ${
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
             activeTab === 'pages'
-              ? 'bg-slate-800 text-white font-semibold'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              ? 'bg-[#683846] text-white font-semibold'
+              : 'text-[#332D2F]/50 hover:text-[#683846] hover:bg-[#F8EDEF]'
           }`}
         >
           📄 Pages Visited ({data.topPages.length})
         </button>
         <button
           onClick={() => setActiveTab('countries')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all ${
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
             activeTab === 'countries'
-              ? 'bg-slate-800 text-white font-semibold'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              ? 'bg-[#683846] text-white font-semibold'
+              : 'text-[#332D2F]/50 hover:text-[#683846] hover:bg-[#F8EDEF]'
           }`}
         >
           🌍 Visitor Countries ({data.topCountries.length})
         </button>
         <button
           onClick={() => setActiveTab('devices')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all ${
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
             activeTab === 'devices'
-              ? 'bg-slate-800 text-white font-semibold'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              ? 'bg-[#683846] text-white font-semibold'
+              : 'text-[#332D2F]/50 hover:text-[#683846] hover:bg-[#F8EDEF]'
           }`}
         >
           📱 Devices &amp; Browsers
         </button>
         <button
           onClick={() => setActiveTab('live')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+          className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'live'
-              ? 'bg-slate-800 text-white font-semibold'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              ? 'bg-[#683846] text-white font-semibold'
+              : 'text-[#332D2F]/50 hover:text-[#683846] hover:bg-[#F8EDEF]'
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-[#B75B70] animate-pulse" />
           <span>Live Visitor Stream</span>
         </button>
       </div>
 
-      {/* Tab: Overview (Retention Curve + Top Countries matching screenshot) */}
+      {/* Tab: Overview (Retention Curve + Top Countries) */}
       {(activeTab === 'overview' || activeTab === 'countries') && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Day 1 Retention Curve (Matching screenshot) */}
+          {/* Day 1 Retention Curve */}
           {activeTab === 'overview' && (
-            <div className="lg:col-span-6 bg-[#131D2F] border border-slate-800 rounded-2xl p-5 shadow-soft flex flex-col justify-between">
+            <div className="lg:col-span-6 bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-5 flex flex-col justify-between">
               <div>
-                <h3 className="text-sm sm:text-base font-bold text-white mb-1">
+                <h3 className="text-sm sm:text-base font-bold text-[#683846] mb-1">
                   Day 1 Retention Curve
                 </h3>
-                <p className="text-xs text-slate-400 mb-3">
+                <p className="text-xs text-[#332D2F]/50 mb-3">
                   Percentage of returning readers across tracking intervals.
                 </p>
               </div>
@@ -576,7 +579,7 @@ export default function AdminAnalyticsPage() {
                     viewBox={`0 0 ${retentionConfig.width} ${retentionConfig.height}`}
                     className="w-full h-auto overflow-visible select-none"
                   >
-                    {/* Y-Axis lines: 0, 20, 40, 60, 80, 100 */}
+                    {/* Y-Axis lines */}
                     {[0, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => {
                       const y = retentionConfig.height - retentionConfig.padY - (v / 100) * (retentionConfig.height - retentionConfig.padY * 2);
                       return (
@@ -586,14 +589,16 @@ export default function AdminAnalyticsPage() {
                             y1={y}
                             x2={retentionConfig.width - 15}
                             y2={y}
-                            stroke="#1E293B"
+                            stroke="#B75B70"
                             strokeWidth="1"
+                            strokeOpacity="0.12"
                             strokeDasharray={v === 0 ? 'none' : '3 3'}
                           />
                           <text
                             x={retentionConfig.padX - 8}
                             y={y + 3}
-                            fill="#64748B"
+                            fill="#332D2F"
+                            fillOpacity="0.35"
                             fontSize="8"
                             textAnchor="end"
                           >
@@ -603,11 +608,11 @@ export default function AdminAnalyticsPage() {
                       );
                     })}
 
-                    {/* Step line in Amber */}
+                    {/* Step line in MummaBee gold */}
                     <path
                       d={retentionConfig.path}
                       fill="none"
-                      stroke="#F59E0B"
+                      stroke="#D7BB91"
                       strokeWidth="2"
                     />
 
@@ -618,7 +623,7 @@ export default function AdminAnalyticsPage() {
                         cx={c.x}
                         cy={c.y}
                         r="3"
-                        fill="#F59E0B"
+                        fill="#D7BB91"
                       />
                     ))}
                   </svg>
@@ -627,18 +632,18 @@ export default function AdminAnalyticsPage() {
             </div>
           )}
 
-          {/* Top Countries Horizontal Bars (Matching screenshot) */}
-          <div className={`${activeTab === 'countries' ? 'lg:col-span-12' : 'lg:col-span-6'} bg-[#131D2F] border border-slate-800 rounded-2xl p-5 shadow-soft`}>
+          {/* Top Countries Horizontal Bars */}
+          <div className={`${activeTab === 'countries' ? 'lg:col-span-12' : 'lg:col-span-6'} bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-5`}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm sm:text-base font-bold text-white mb-1">
+                <h3 className="text-sm sm:text-base font-bold text-[#683846] mb-1">
                   Top Countries
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-[#332D2F]/50">
                   Where your visitors and readers are currently reading from.
                 </p>
               </div>
-              <span className="text-xs text-slate-400 font-medium">
+              <span className="text-xs text-[#332D2F]/50 font-medium">
                 {data.topCountries.length} countries recorded
               </span>
             </div>
@@ -649,18 +654,18 @@ export default function AdminAnalyticsPage() {
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <span className="text-base">{c.flag}</span>
-                      <span className="font-semibold text-slate-200">{c.country}</span>
+                      <span className="font-semibold text-[#332D2F]">{c.country}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                      <span className="font-bold text-white">{c.visits} visits</span>
+                    <div className="flex items-center gap-2 text-[#332D2F]/50 text-[11px]">
+                      <span className="font-bold text-[#683846]">{c.visits} visits</span>
                       <span>({c.percentage}%)</span>
                     </div>
                   </div>
 
                   {/* Horizontal Bar */}
-                  <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-white rounded-full overflow-hidden border border-[#B75B70]/10">
                     <div
-                      className="h-full bg-emerald-400 rounded-full transition-all duration-700"
+                      className="h-full bg-[#B75B70] rounded-full transition-all duration-700"
                       style={{ width: `${Math.min(c.percentage * 1.5 + 5, 100)}%` }}
                     />
                   </div>
@@ -673,21 +678,21 @@ export default function AdminAnalyticsPage() {
 
       {/* Tab: Pages Visited Breakdown */}
       {activeTab === 'pages' && (
-        <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-5 shadow-soft space-y-4">
+        <div className="bg-white border border-[#B75B70]/10 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-white">
+              <h3 className="text-sm sm:text-base font-bold text-[#683846]">
                 Most Visited Pages &amp; Articles
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#332D2F]/50">
                 Detailed view count and visitor interest across all public routes.
               </p>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+            <table className="w-full text-left text-xs text-[#332D2F]">
+              <thead className="bg-[#F8EDEF] text-[11px] font-bold text-[#332D2F]/50 uppercase tracking-wider border-b border-[#B75B70]/10">
                 <tr>
                   <th className="py-3 px-4">Page / Article Route</th>
                   <th className="py-3 px-4 text-right">Pageviews</th>
@@ -696,21 +701,21 @@ export default function AdminAnalyticsPage() {
                   <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-[#B75B70]/5">
                 {data.topPages.map((page) => (
-                  <tr key={page.path} className="hover:bg-slate-800/40 transition-colors">
+                  <tr key={page.path} className="hover:bg-[#F8EDEF]/50 transition-colors">
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-white">{page.title}</div>
-                      <div className="text-[11px] text-emerald-400 font-mono mt-0.5">{page.path}</div>
+                      <div className="font-semibold text-[#683846]">{page.title}</div>
+                      <div className="text-[11px] text-[#B75B70] font-mono mt-0.5">{page.path}</div>
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-white">
+                    <td className="py-3 px-4 text-right font-bold text-[#683846]">
                       {page.pageviews}
                     </td>
-                    <td className="py-3 px-4 text-right text-purple-400 font-semibold">
+                    <td className="py-3 px-4 text-right text-[#B75B70] font-semibold">
                       {page.visitors}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#683846]/10 text-[#683846] border border-[#683846]/15">
                         {page.percentage}%
                       </span>
                     </td>
@@ -718,7 +723,7 @@ export default function AdminAnalyticsPage() {
                       <Link
                         href={page.path}
                         target="_blank"
-                        className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] text-[#332D2F]/40 hover:text-[#683846] transition-colors"
                       >
                         <span>View</span>
                         <span>↗</span>
@@ -739,28 +744,28 @@ export default function AdminAnalyticsPage() {
             {data.deviceBreakdown.map((dev) => (
               <div
                 key={dev.device}
-                className="bg-[#131D2F] border border-slate-800 rounded-2xl p-5 shadow-soft space-y-3"
+                className="bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-5 space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <span className="text-2xl">{dev.icon}</span>
-                    <span className="text-sm font-bold text-white">{dev.device}</span>
+                    <span className="text-sm font-bold text-[#683846]">{dev.device}</span>
                   </div>
-                  <span className="text-lg font-bold text-emerald-400">
+                  <span className="text-lg font-bold text-[#B75B70]">
                     {dev.percentage}%
                   </span>
                 </div>
 
-                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-[#B75B70]/10">
                   <div
-                    className="h-full bg-emerald-400 rounded-full"
+                    className="h-full bg-[#B75B70] rounded-full"
                     style={{ width: `${dev.percentage}%` }}
                   />
                 </div>
 
-                <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
+                <div className="text-[11px] text-[#332D2F]/50 flex items-center justify-between pt-1">
                   <span>{dev.count} total sessions</span>
-                  <span className="font-semibold text-slate-300">
+                  <span className="font-semibold text-[#332D2F]/70">
                     {dev.device === 'Mobile' ? 'Smartphones' : dev.device === 'Desktop' ? 'Laptops & PCs' : 'iPads'}
                   </span>
                 </div>
@@ -768,10 +773,10 @@ export default function AdminAnalyticsPage() {
             ))}
           </div>
 
-          <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-5 shadow-soft">
-            <h4 className="text-sm font-bold text-white mb-2">Device &amp; Platform Recommendations</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Based on your audience metrics, <strong className="text-emerald-400">{data.deviceBreakdown.find((d) => d.device === 'Mobile')?.percentage}%</strong> of all MummaBeeBlog visitors browse on mobile devices. All editorial articles, photography galleries, and discount codes are mobile-first responsive.
+          <div className="bg-[#F8EDEF] border border-[#B75B70]/15 rounded-2xl p-5">
+            <h4 className="text-sm font-bold text-[#683846] mb-2">Device &amp; Platform Recommendations</h4>
+            <p className="text-xs text-[#332D2F]/60 leading-relaxed">
+              Based on your audience metrics, <strong className="text-[#B75B70]">{data.deviceBreakdown.find((d) => d.device === 'Mobile')?.percentage}%</strong> of all MummaBeeBlog visitors browse on mobile devices. All editorial articles, photography galleries, and discount codes are mobile-first responsive.
             </p>
           </div>
         </div>
@@ -779,36 +784,36 @@ export default function AdminAnalyticsPage() {
 
       {/* Tab: Live Real-Time Visitor Stream */}
       {activeTab === 'live' && (
-        <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-5 shadow-soft space-y-4">
+        <div className="bg-white border border-[#B75B70]/10 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <h3 className="text-sm sm:text-base font-bold text-[#683846] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#B75B70] animate-pulse" />
                 Live Telemetry Log
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#332D2F]/50">
                 Latest 30 recorded visitor interactions with geographical coordinates and devices.
               </p>
             </div>
 
             {/* Simulation Quick Trigger */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400">Test Trigger:</span>
+              <span className="text-[10px] text-[#332D2F]/40">Test Trigger:</span>
               <button
                 onClick={() => handleSimulateVisit('United Arab Emirates', 'AE', '🇦🇪', '/uae-with-kids')}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[10px] font-semibold border border-slate-700"
+                className="px-2.5 py-1 bg-[#F8EDEF] hover:bg-[#B75B70]/15 text-[#683846] rounded-lg text-[10px] font-semibold border border-[#B75B70]/20 cursor-pointer"
               >
                 🇦🇪 UAE
               </button>
               <button
                 onClick={() => handleSimulateVisit('Philippines', 'PH', '🇵🇭', '/')}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[10px] font-semibold border border-slate-700"
+                className="px-2.5 py-1 bg-[#F8EDEF] hover:bg-[#B75B70]/15 text-[#683846] rounded-lg text-[10px] font-semibold border border-[#B75B70]/20 cursor-pointer"
               >
                 🇵🇭 PH
               </button>
               <button
                 onClick={() => handleSimulateVisit('United States', 'US', '🇺🇸', '/food')}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[10px] font-semibold border border-slate-700"
+                className="px-2.5 py-1 bg-[#F8EDEF] hover:bg-[#B75B70]/15 text-[#683846] rounded-lg text-[10px] font-semibold border border-[#B75B70]/20 cursor-pointer"
               >
                 🇺🇸 US
               </button>
@@ -816,8 +821,8 @@ export default function AdminAnalyticsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+            <table className="w-full text-left text-xs text-[#332D2F]">
+              <thead className="bg-[#F8EDEF] text-[11px] font-bold text-[#332D2F]/50 uppercase tracking-wider border-b border-[#B75B70]/10">
                 <tr>
                   <th className="py-3 px-4">Time</th>
                   <th className="py-3 px-4">Page Visited</th>
@@ -826,37 +831,37 @@ export default function AdminAnalyticsPage() {
                   <th className="py-3 px-4">Browser</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-[#B75B70]/5">
                 {data.recentVisitors.map((v) => {
                   const d = new Date(v.timestamp);
                   const timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                   const dateFormatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                   return (
-                    <tr key={v.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-400 font-mono text-[11px]">
+                    <tr key={v.id} className="hover:bg-[#F8EDEF]/50 transition-colors">
+                      <td className="py-3 px-4 whitespace-nowrap text-[#332D2F]/40 font-mono text-[11px]">
                         {dateFormatted} {timeFormatted}
                       </td>
                       <td className="py-3 px-4">
                         <Link
                           href={v.path}
                           target="_blank"
-                          className="font-semibold text-white hover:text-emerald-400 transition-colors block max-w-xs truncate"
+                          className="font-semibold text-[#683846] hover:text-[#B75B70] transition-colors block max-w-xs truncate"
                         >
                           {v.title || v.path}
                         </Link>
-                        <span className="text-[10px] text-slate-500 font-mono">{v.path}</span>
+                        <span className="text-[10px] text-[#332D2F]/30 font-mono">{v.path}</span>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span className="mr-1.5 text-base">{v.flag}</span>
-                        <span className="font-medium text-slate-200">{v.country}</span>
+                        <span className="font-medium text-[#332D2F]">{v.country}</span>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="font-semibold text-white">
+                        <span className="font-semibold text-[#683846]">
                           {v.device === 'Mobile' ? '📱 Mobile' : v.device === 'Tablet' ? '📟 Tablet' : '💻 Desktop'}
                         </span>
-                        <span className="text-[10px] text-slate-400 block">{v.os}</span>
+                        <span className="text-[10px] text-[#332D2F]/40 block">{v.os}</span>
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-300">
+                      <td className="py-3 px-4 whitespace-nowrap text-[#332D2F]/70">
                         {v.browser}
                       </td>
                     </tr>
