@@ -21,11 +21,11 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Inline "Create New User / Artist" Form State (Matching Reference Layout)
+  // Inline "Create New User / Assistant" Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('Artist');
+  const [role, setRole] = useState<UserRole>('Assistant');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit Role Modal State
@@ -117,7 +117,7 @@ export default function AdminUsersPage() {
       setName('');
       setEmail('');
       setPassword('');
-      setRole('Artist');
+      setRole('Assistant');
       loadData();
       setTimeout(() => setMessage(''), 4000);
     } else {
@@ -238,7 +238,7 @@ export default function AdminUsersPage() {
       {/* Inline Creation Form (Matching Reference Layout Styled in Website Theme) */}
       <div className="bg-[#FAF7F7] border border-[#B75B70]/15 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
         <h2 className="font-serif text-lg font-bold text-[#683846] tracking-wide">
-          Create New User / Artist
+          Create New User / Assistant
         </h2>
 
         <form onSubmit={handleCreateUser} className="space-y-4">
@@ -286,9 +286,6 @@ export default function AdminUsersPage() {
                 onChange={(e) => setRole(e.target.value as UserRole)}
                 className="w-full px-4 py-3.5 bg-white border border-[#B75B70]/25 rounded-xl text-sm text-[#332D2F] font-medium focus:outline-none focus:border-[#683846] focus:ring-1 focus:ring-[#683846] transition-all appearance-none cursor-pointer"
               >
-                <option value="Artist">
-                  Artist (Content Creator / Restricted)
-                </option>
                 <option value="Assistant">
                   Assistant (Editorial Staff / Restricted)
                 </option>
@@ -361,8 +358,6 @@ export default function AdminUsersPage() {
                             className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
                               user.role === 'Admin'
                                 ? 'bg-[#683846] text-white shadow-xs'
-                                : user.role === 'Artist'
-                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
                                 : 'bg-amber-100 text-amber-800 border border-amber-200'
                             }`}
                           >
@@ -390,11 +385,6 @@ export default function AdminUsersPage() {
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#683846]/10 text-[#683846] border border-[#683846]/25">
                             <span>👑</span>
                             <span>Admin</span>
-                          </span>
-                        ) : user.role === 'Artist' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
-                            <span>🎨</span>
-                            <span>Artist</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
@@ -510,7 +500,6 @@ export default function AdminUsersPage() {
                   onChange={(e) => setEditRole(e.target.value as UserRole)}
                   className="w-full px-4 py-3 bg-[#FAF7F7] border border-[#B75B70]/25 rounded-xl text-sm text-[#332D2F] font-medium focus:outline-none focus:border-[#683846]"
                 >
-                  <option value="Artist">Artist (Content Creator / Restricted)</option>
                   <option value="Assistant">Assistant (Editorial Staff / Restricted)</option>
                   <option value="Admin">Admin (Full System Access)</option>
                 </select>
