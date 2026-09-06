@@ -127,7 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div>
             <span className="font-serif text-lg font-bold block leading-none">MummaBee CMS</span>
             <span className="text-[10px] font-sans text-[#D7BB91]">
-              {userIsAdmin ? '👑 Admin' : '🛡️ Assistant'}
+              {userIsAdmin ? '👑 Admin' : userRole === 'Artist' ? '🎨 Artist' : '🛡️ Assistant'}
             </span>
           </div>
         </div>
@@ -161,6 +161,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#683846] text-white tracking-wider uppercase">
                     <span>👑</span>
                     <span>Admin</span>
+                  </span>
+                ) : userRole === 'Artist' ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 text-purple-900 border border-purple-300 tracking-wider uppercase">
+                    <span>🎨</span>
+                    <span>Artist</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 tracking-wider uppercase">

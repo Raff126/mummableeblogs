@@ -28,51 +28,26 @@ export const USER_STORAGE_KEYS = {
   CURRENT_USER: 'mummabee_current_user',
 };
 
-// Initial Seed Users: 3 Primary Admins + 1 Pre-configured Assistant for immediate testing
+// Seed Users: Only Donne (Mumma Bee) remains as the primary administrator
 export const DEFAULT_USERS: UserAccount[] = [
   {
-    id: 'usr-admin-1',
-    name: 'Raffy Olaivar',
-    email: 'raffyolaivar25@gmail.com',
-    role: 'Admin',
-    status: 'Active',
-    createdAt: '2026-08-01T00:00:00Z',
-    lastLogin: '2026-09-06T00:00:00Z',
-    authMethod: 'google',
-  },
-  {
-    id: 'usr-admin-2',
-    name: 'Kathrine Olaivar',
-    email: 'olaivarkathrine@gmail.com',
-    role: 'Admin',
-    status: 'Active',
-    createdAt: '2026-08-15T00:00:00Z',
-    lastLogin: '2026-09-06T00:20:00Z',
-    authMethod: 'google',
-  },
-  {
-    id: 'usr-admin-3',
+    id: 'usr-admin-donne',
     name: 'Donne (Mumma Bee)',
     email: 'donne@mummabeeblog.com',
     role: 'Admin',
     status: 'Active',
     createdAt: '2026-08-01T00:00:00Z',
-    lastLogin: '2026-09-05T12:00:00Z',
+    lastLogin: '2026-09-06T12:37:00Z',
     authMethod: 'both',
     passwordHash: 'MummaBee2026!',
   },
-  {
-    id: 'usr-assistant-1',
-    name: 'Editorial Assistant',
-    email: 'assistant@mummabeeblog.com',
-    role: 'Assistant',
-    status: 'Active',
-    createdAt: '2026-09-01T00:00:00Z',
-    lastLogin: '2026-09-05T09:00:00Z',
-    authMethod: 'both',
-    passwordHash: 'Assistant2026!',
-  },
 ];
+
+const LEGACY_EMAILS_TO_REMOVE = new Set([
+  'raffyolaivar25@gmail.com',
+  'olaivarkathrine@gmail.com',
+  'assistant@mummabeeblog.com',
+]);
 
 // Read user list from localStorage with fallback to default seed
 export function getUsersList(): UserAccount[] {
@@ -81,24 +56,27 @@ export function getUsersList(): UserAccount[] {
     const raw = localStorage.getItem(USER_STORAGE_KEYS.USERS);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure default primary admins are always present
-        const existingEmails = new Set(parsed.map((u: UserAccount) => u.email.toLowerCase()));
-        let needsSave = false;
-        const merged = [...parsed];
+      if (Array.isArray(parsed)) {
+        // Filter out legacy removed test emails
+        const filtered = parsed.filter(
+          (u: UserAccount) => u?.email && !LEGACY_EMAILS_TO_REMOVE.has(u.email.trim().toLowerCase())
+        );
 
-        for (const defUser of DEFAULT_USERS) {
-          if (!existingEmails.has(defUser.email.toLowerCase())) {
-            merged.push(defUser);
-            existingEmails.add(defUser.email.toLowerCase());
-            needsSave = true;
-          }
+        // Ensure Donne is always present
+        const hasDonne = filtered.some(
+          (u: UserAccount) => u.email?.trim().toLowerCase() === 'donne@mummabeeblog.com'
+        );
+
+        let finalUsers = filtered;
+        if (!hasDonne) {
+          finalUsers = [DEFAULT_USERS[0], ...filtered];
         }
 
-        if (needsSave) {
-          localStorage.setItem(USER_STORAGE_KEYS.USERS, JSON.stringify(merged));
+        // If changes were made, persist the cleaned list
+        if (finalUsers.length !== parsed.length || !hasDonne) {
+          localStorage.setItem(USER_STORAGE_KEYS.USERS, JSON.stringify(finalUsers));
         }
-        return merged;
+        return finalUsers;
       }
     }
   } catch (_) {}
@@ -133,13 +111,8 @@ export function resolveRoleForEmail(email: string): UserRole {
   const user = findUserByEmail(email);
   if (user) return user.role;
 
-  // Fallback check for known admin emails
   const clean = email.trim().toLowerCase();
-  if (
-    clean === 'raffyolaivar25@gmail.com' ||
-    clean === 'olaivarkathrine@gmail.com' ||
-    clean === 'donne@mummabeeblog.com'
-  ) {
+  if (clean === 'donne@mummabeeblog.com') {
     return 'Admin';
   }
   return 'Assistant';
@@ -153,20 +126,33 @@ export function getCurrentUser(): CurrentSessionUser | null {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && parsed.email) {
+        const cleanEmail = parsed.email.trim().toLowerCase();
+        // If the stored session was an old removed test user, switch session to Donne
+        if (LEGACY_EMAILS_TO_REMOVE.has(cleanEmail)) {
+          const donneAdmin: CurrentSessionUser = {
+            id: 'usr-admin-donne',
+            name: 'Donne (Mumma Bee)',
+            email: 'donne@mummabeeblog.com',
+            role: 'Admin',
+            authMethod: 'password',
+          };
+          setCurrentUser(donneAdmin);
+          return donneAdmin;
+        }
         return parsed as CurrentSessionUser;
       }
     }
   } catch (_) {}
 
-  // If authenticated via mummabee_auth but no current_user record, default to primary admin
+  // If authenticated via mummabee_auth but no current_user record, default to Donne
   const isAuth = localStorage.getItem('mummabee_auth') === 'true';
   if (isAuth) {
     const defaultSession: CurrentSessionUser = {
-      id: 'usr-admin-1',
-      name: 'Raffy Olaivar',
-      email: 'raffyolaivar25@gmail.com',
+      id: 'usr-admin-donne',
+      name: 'Donne (Mumma Bee)',
+      email: 'donne@mummabeeblog.com',
       role: 'Admin',
-      authMethod: 'google',
+      authMethod: 'password',
     };
     setCurrentUser(defaultSession);
     return defaultSession;
@@ -264,10 +250,10 @@ export function updateUser(
     return { success: false, error: 'User not found.' };
   }
 
-  // Prevent demoting the last primary admin
+  // Prevent demoting the last active administrator
   if (updates.role && updates.role !== 'Admin' && target.role === 'Admin') {
-    const adminCount = users.filter((u) => u.role === 'Admin' && u.status === 'Active').length;
-    if (adminCount <= 1) {
+    const otherActiveAdmins = users.filter((u) => u.id !== id && u.role === 'Admin' && u.status === 'Active');
+    if (otherActiveAdmins.length === 0) {
       return { success: false, error: 'Cannot change role: You must maintain at least one active Administrator.' };
     }
   }
@@ -306,15 +292,11 @@ export function deleteUser(id: string): { success: boolean; error?: string } {
     return { success: false, error: 'User not found.' };
   }
 
-  // Prevent deleting primary admin accounts
-  if (target.email === 'raffyolaivar25@gmail.com') {
-    return { success: false, error: 'The Primary Administrator account cannot be deleted.' };
-  }
-
+  // Prevent deleting the last active administrator
   if (target.role === 'Admin') {
-    const adminCount = users.filter((u) => u.role === 'Admin').length;
-    if (adminCount <= 1) {
-      return { success: false, error: 'Cannot delete: You must keep at least one active Administrator.' };
+    const otherActiveAdmins = users.filter((u) => u.id !== id && u.role === 'Admin' && u.status === 'Active');
+    if (otherActiveAdmins.length === 0) {
+      return { success: false, error: 'Cannot delete: You must keep at least one active Administrator (donne@mummabeeblog.com).' };
     }
   }
 
