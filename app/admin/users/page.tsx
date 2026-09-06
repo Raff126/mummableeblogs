@@ -231,7 +231,7 @@ export default function AdminUsersPage() {
           Manage Users
         </h1>
         <p className="text-xs text-[#332D2F]/70 mt-1">
-          Create Artist, Assistant, or Admin accounts and manage permissions.
+          Create Assistant or Admin accounts and manage permissions.
         </p>
       </div>
 
