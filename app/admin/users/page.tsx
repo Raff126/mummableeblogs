@@ -21,11 +21,11 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Inline "Create New User / Assistant" Form State (Matching Screenshot)
+  // Inline "Create New User / Artist" Form State (Matching Screenshot)
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('Assistant');
+  const [role, setRole] = useState<UserRole>('Artist');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit Role Modal State
@@ -117,7 +117,7 @@ export default function AdminUsersPage() {
       setName('');
       setEmail('');
       setPassword('');
-      setRole('Assistant');
+      setRole('Artist');
       loadData();
       setTimeout(() => setMessage(''), 4000);
     } else {
@@ -184,24 +184,39 @@ export default function AdminUsersPage() {
   );
 
   return (
-    <div className="w-full bg-[#0B111E] text-slate-100 rounded-3xl p-5 sm:p-8 shadow-2xl border border-slate-800/80 font-sans space-y-7">
+    <div className="w-full bg-[#0B0F17] text-slate-100 rounded-3xl p-4 sm:p-7 shadow-2xl border border-slate-800/80 font-sans space-y-6">
       
-      {/* Top Main Heading (Matching Screenshot: "Manage Users") */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Manage Users
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Create Assistant or Admin accounts, manage credentials, and assign roles.
-          </p>
+      {/* Top Header Bar (Matching User Screenshot Exactly) */}
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+        {/* Left Hamburger Icon */}
+        <div className="flex items-center">
+          <button
+            type="button"
+            aria-label="Navigation Menu"
+            className="text-white hover:text-slate-300 p-1 rounded-md transition-colors flex flex-col justify-center gap-1.5 w-6 h-6 cursor-pointer"
+          >
+            <span className="block h-0.5 w-5 bg-white rounded-full"></span>
+            <span className="block h-0.5 w-5 bg-white rounded-full"></span>
+            <span className="block h-0.5 w-5 bg-white rounded-full"></span>
+          </button>
         </div>
 
-        {/* Current Admin Badge */}
-        <div className="flex items-center gap-2 self-start sm:self-auto px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-slate-300">Admin:</span>
-          <span className="font-semibold text-white">{currentAdmin?.name || 'Administrator'}</span>
+        {/* Center Title: Admin (admin) */}
+        <div className="text-sm sm:text-base font-semibold text-slate-200 tracking-wide">
+          Admin (admin)
+        </div>
+
+        {/* Right Badges */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <span className="px-2.5 py-1 text-[11px] font-medium text-emerald-400 border border-emerald-600/70 rounded-md bg-emerald-950/20">
+            Incentives: $0.00
+          </span>
+          <span className="px-2.5 py-1 text-[11px] font-medium text-rose-400 border border-rose-600/70 rounded-md bg-rose-950/20">
+            Penalties: $0.00
+          </span>
+          <span className="px-2.5 py-1 text-[11px] font-medium text-indigo-400 border border-indigo-600/70 rounded-md bg-indigo-950/20 hidden sm:inline-block">
+            Tasks: 0/5
+          </span>
         </div>
       </div>
 
@@ -220,13 +235,20 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Manage Users Main Title */}
+      <div className="pt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          Manage Users
+        </h1>
+      </div>
+
       {/* Inline Creation Form (Matching Screenshot Exact Layout) */}
-      <div className="bg-[#131D2F] border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-soft space-y-4">
-        <h2 className="text-base sm:text-lg font-bold text-white">
-          Create New User / Assistant
+      <div className="space-y-4">
+        <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
+          Create New User / Artist
         </h2>
 
-        <form onSubmit={handleCreateUser} className="space-y-3.5">
+        <form onSubmit={handleCreateUser} className="space-y-4">
           {/* Name Input */}
           <div>
             <input
@@ -234,7 +256,7 @@ export default function AdminUsersPage() {
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-[#090D16] border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full px-4 py-3.5 bg-[#0D131F] border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
 
@@ -245,7 +267,7 @@ export default function AdminUsersPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-[#090D16] border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full px-4 py-3.5 bg-[#0D131F] border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
 
@@ -256,7 +278,7 @@ export default function AdminUsersPage() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-[#090D16] border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full px-4 py-3.5 bg-[#0D131F] border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
 
@@ -269,26 +291,31 @@ export default function AdminUsersPage() {
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full px-4 py-3 bg-[#090D16] border border-slate-700/80 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none cursor-pointer"
+                className="w-full px-4 py-3.5 bg-[#0D131F] border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none cursor-pointer"
               >
-                <option value="Assistant" className="bg-[#090D16] text-white">
-                  Assistant (Content-only access: blogs, media, deals)
+                <option value="Artist" className="bg-[#0D131F] text-white">
+                  Artist
                 </option>
-                <option value="Admin" className="bg-[#090D16] text-white">
-                  Admin (Full access: users, analytics, settings)
+                <option value="Assistant" className="bg-[#0D131F] text-white">
+                  Assistant
+                </option>
+                <option value="Admin" className="bg-[#0D131F] text-white">
+                  Admin
                 </option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                ▼
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
           </div>
 
-          {/* Full-Width Action Button (Matching Screenshot: "Create User") */}
+          {/* Full-Width Action Button (Matching Screenshot: Purple "Create User") */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3.5 bg-[#6366F1] hover:bg-[#4F46E5] active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-lg hover:shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 bg-[#635BFF] hover:bg-[#5249E6] active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-lg hover:shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
           >
             {isSubmitting ? 'Creating User...' : 'Create User'}
           </button>
@@ -374,6 +401,11 @@ export default function AdminUsersPage() {
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                             <span>👑</span>
                             <span>Admin</span>
+                          </span>
+                        ) : user.role === 'Artist' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            <span>🎨</span>
+                            <span>Artist</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -491,7 +523,8 @@ export default function AdminUsersPage() {
                   onChange={(e) => setEditRole(e.target.value as UserRole)}
                   className="w-full px-4 py-3 bg-[#090D16] border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="Assistant">Assistant (Restricted)</option>
+                  <option value="Artist">Artist (Content Restricted)</option>
+                  <option value="Assistant">Assistant (Content Restricted)</option>
                   <option value="Admin">Admin (Full Access)</option>
                 </select>
               </div>

@@ -1,6 +1,6 @@
 // Role-Based Access Control (RBAC) & User Management Engine for MummaBee CMS
 
-export type UserRole = 'Admin' | 'Assistant';
+export type UserRole = 'Admin' | 'Assistant' | 'Artist';
 
 export interface UserAccount {
   id: string;
@@ -203,7 +203,7 @@ export function isAdmin(): boolean {
 
 export function isAssistant(): boolean {
   const role = getCurrentUserRole();
-  return role === 'Assistant';
+  return role === 'Assistant' || role === 'Artist';
 }
 
 export function hasAdminAccess(): boolean {
