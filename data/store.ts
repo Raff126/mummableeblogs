@@ -745,6 +745,7 @@ import {
 
 export const DEFAULT_ADMIN_EMAILS: string[] = [
   'raffyolaivar25@gmail.com',
+  'olaivarkathrine@gmail.com',
   'donne@mummabeeblog.com',
 ];
 
@@ -797,9 +798,13 @@ export async function logout(): Promise<void> {
     } catch (_) {}
   }
   setAuthenticated(false);
+  try {
+    const { setCurrentUser } = await import('./users');
+    setCurrentUser(null);
+  } catch (_) {}
 }
 
-export async function loginWithGoogle(): Promise<{ success: boolean; email?: string; error?: string }> {
+export async function loginWithGoogle(): Promise<{ success: boolean; email?: string; role?: string; error?: string }> {
   const auth = getFirebaseAuth();
   if (!auth) {
     return { success: false, error: 'Firebase Auth is not available. Please try again.' };
@@ -817,20 +822,43 @@ export async function loginWithGoogle(): Promise<{ success: boolean; email?: str
       return { success: false, error: 'Could not retrieve email from Google account.' };
     }
 
-    const authorizedList = getAuthorizedAdminEmails().map((e) => e.trim().toLowerCase());
-    const isAuthorized = authorizedList.includes(userEmail);
+    const { getUsersList, findUserByEmail, resolveRoleForEmail, setCurrentUser } = await import('./users');
+    const allUsers = getUsersList();
+    const existingUser = findUserByEmail(userEmail);
+    const authorizedAdmins = getAuthorizedAdminEmails().map((e) => e.trim().toLowerCase());
+
+    const isAuthorized = existingUser || authorizedAdmins.includes(userEmail);
 
     if (!isAuthorized) {
       await signOut(auth);
       setAuthenticated(false);
       return {
         success: false,
-        error: `Access Denied: The Google account "${userEmail}" is not authorized to access the MummaBee CMS. Please sign in with an authorized administrator account.`,
+        error: `Access Denied: The Google account "${userEmail}" is not registered in MummaBee CMS. Please contact the Administrator for an invite.`,
       };
     }
 
+    if (existingUser && existingUser.status === 'Suspended') {
+      await signOut(auth);
+      setAuthenticated(false);
+      return {
+        success: false,
+        error: `Access Denied: Your account (${userEmail}) is suspended. Please contact the Administrator.`,
+      };
+    }
+
+    const role = existingUser ? existingUser.role : resolveRoleForEmail(userEmail);
+
+    setCurrentUser({
+      id: existingUser ? existingUser.id : `usr-g-${Date.now()}`,
+      name: existingUser?.name || result.user.displayName || userEmail.split('@')[0],
+      email: userEmail,
+      role,
+      authMethod: 'google',
+    });
+
     setAuthenticated(true);
-    return { success: true, email: userEmail };
+    return { success: true, email: userEmail, role };
   } catch (err: any) {
     console.error('Firebase Google sign-in error:', err?.code, err?.message);
     let errorMsg = err?.message || 'Google sign-in failed. Please try again.';
@@ -847,19 +875,49 @@ export async function loginWithGoogle(): Promise<{ success: boolean; email?: str
   }
 }
 
-export async function loginWithFirebase(emailInput: string, passwordInput: string): Promise<{ success: boolean; error?: string }> {
-  const cleanEmail = emailInput.trim();
+export async function loginWithFirebase(emailInput: string, passwordInput: string): Promise<{ success: boolean; role?: string; error?: string }> {
+  const cleanEmail = emailInput.trim().toLowerCase();
+
+  // First, check local registered users (including newly created Assistant/Admin accounts)
+  try {
+    const { verifyCredentials, setCurrentUser } = await import('./users');
+    const localCheck = verifyCredentials(cleanEmail, passwordInput);
+    if (localCheck.success && localCheck.user) {
+      setCurrentUser({
+        id: localCheck.user.id,
+        name: localCheck.user.name,
+        email: localCheck.user.email,
+        role: localCheck.user.role,
+        authMethod: 'password',
+      });
+      setAuthenticated(true);
+      return { success: true, role: localCheck.user.role };
+    }
+  } catch (_) {}
+
   const auth = getFirebaseAuth();
 
   if (!auth) {
-    return { success: false, error: 'Firebase Auth is not available. Please try again.' };
+    return { success: false, error: 'Authentication service is not available. Please try again.' };
   }
 
   try {
     const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, passwordInput);
     if (userCredential?.user) {
+      const { resolveRoleForEmail, findUserByEmail, setCurrentUser } = await import('./users');
+      const existingUser = findUserByEmail(cleanEmail);
+      const role = existingUser ? existingUser.role : resolveRoleForEmail(cleanEmail);
+
+      setCurrentUser({
+        id: existingUser ? existingUser.id : `usr-fb-${Date.now()}`,
+        name: existingUser?.name || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        role,
+        authMethod: 'password',
+      });
+
       setAuthenticated(true);
-      return { success: true };
+      return { success: true, role };
     }
     return { success: false, error: 'Authentication failed. Please check your credentials.' };
   } catch (err: any) {

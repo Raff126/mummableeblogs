@@ -240,7 +240,14 @@ export function recordPageView(eventData: Partial<AnalyticsEvent>): void {
   }
 }
 
-export function getAnalyticsSummary(timeRange: 'today' | '7d' | '30d' | 'all' = '30d'): AnalyticsSummary {
+import { isAdmin } from './users';
+
+export function getAnalyticsSummary(timeRange: 'today' | '7d' | '30d' | 'all' = '30d'): AnalyticsSummary | null {
+  // Strict RBAC: Analytics is restricted to Administrators only
+  if (typeof window !== 'undefined' && !isAdmin()) {
+    return null;
+  }
+
   const events = getStoredEvents();
   const now = new Date();
 

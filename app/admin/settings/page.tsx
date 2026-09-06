@@ -8,6 +8,8 @@ import {
   getAuthorizedAdminEmails,
   saveAuthorizedAdminEmails,
 } from '../../../data/store';
+import { isAdmin } from '../../../data/users';
+import Link from 'next/link';
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -21,6 +23,37 @@ export default function AdminSettingsPage() {
     setSettings(getInitialSettings());
     setAdminEmails(getAuthorizedAdminEmails());
   }, []);
+
+  if (!isAdmin()) {
+    return (
+      <div className="min-h-[500px] flex items-center justify-center p-6 font-sans">
+        <div className="bg-white max-w-md w-full rounded-3xl p-8 border border-red-200 shadow-card text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-500 border border-red-100 flex items-center justify-center mx-auto text-2xl">
+            🚫
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+              HTTP 403 Forbidden
+            </span>
+            <h1 className="font-serif text-2xl font-bold text-[#683846] mt-2">
+              Settings Restricted
+            </h1>
+            <p className="text-xs text-[#332D2F]/75 leading-relaxed">
+              Site Settings and Administrator configurations are restricted to full Administrators. As an <strong>Assistant</strong>, you do not have permission to modify site configuration.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/admin"
+              className="inline-block px-6 py-2.5 bg-[#683846] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#522b37] transition-all"
+            >
+              Return to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!settings) return null;
 
