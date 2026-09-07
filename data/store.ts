@@ -150,7 +150,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   pinterestUrl: 'https://ph.pinterest.com/mummabeeblog/',
   defaultSeoTitle: 'MummaBeeBlog | UAE Family Life, Kids Activities & Honest Guides',
   defaultSeoDescription: 'Tested UAE family guides, weekend activities, child-friendly dining, and practical parenting advice from a mum raising two girls across Dubai and Abu Dhabi.',
-  comingSoonMode: true,
+  comingSoonMode: false,
 };
 
 export const DEFAULT_HOMEPAGE: HomepageContent = {

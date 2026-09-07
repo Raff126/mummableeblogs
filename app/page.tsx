@@ -59,7 +59,7 @@ function getInitialComingSoon(): boolean {
       }
     }
   } catch (_) {}
-  return true; // Default to true in production as requested
+  return false;
 }
 
 export default function HomePage() {
