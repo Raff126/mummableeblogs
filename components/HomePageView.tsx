@@ -13,7 +13,7 @@ import CredibilitySection from './CredibilitySection';
 import InstagramSection from './InstagramSection';
 import DiscountCodesSection from './DiscountCodesSection';
 import NewsletterBand from './NewsletterBand';
-import { getInitialSettings, STORAGE_KEYS } from '../data/store';
+import { getInitialSettings, isAuthenticated, STORAGE_KEYS } from '../data/store';
 
 interface HomePageViewProps {
   initialComingSoon?: boolean;
@@ -23,7 +23,21 @@ export default function HomePageView({ initialComingSoon = true }: HomePageViewP
   const [isComingSoon, setIsComingSoon] = useState<boolean>(initialComingSoon);
 
   useEffect(() => {
-    // Check local settings
+    if (typeof window !== 'undefined') {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('comingsoon') === 'true') {
+        setIsComingSoon(true);
+        return;
+      }
+      // On localhost or if authenticated or preview=true, show full website behind the scenes
+      if (isLocal || isAuthenticated() || urlParams.get('preview') === 'true') {
+        setIsComingSoon(false);
+        return;
+      }
+    }
+
+    // Otherwise check stored settings
     const settings = getInitialSettings();
     if (typeof settings.comingSoonMode === 'boolean') {
       setIsComingSoon(settings.comingSoonMode);

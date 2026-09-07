@@ -11,6 +11,19 @@ export default function Footer() {
   const pathname = usePathname();
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('comingsoon') === 'true') {
+        setIsComingSoon(true);
+        return;
+      }
+      if (isLocal || urlParams.get('preview') === 'true') {
+        setIsComingSoon(false);
+        return;
+      }
+    }
+
     const s = getInitialSettings();
     if (typeof s.comingSoonMode === 'boolean') {
       setIsComingSoon(s.comingSoonMode);

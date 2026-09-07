@@ -46,6 +46,10 @@ import path from 'path';
 import HomePageView from '../components/HomePageView';
 
 function getInitialComingSoon(): boolean {
+  // In development (localhost), show the full behind-the-scenes website so you can work on it!
+  if (process.env.NODE_ENV !== 'production') {
+    return false;
+  }
   try {
     const filePath = path.join(process.cwd(), 'data', 'settings.json');
     if (fs.existsSync(filePath)) {
@@ -55,7 +59,7 @@ function getInitialComingSoon(): boolean {
       }
     }
   } catch (_) {}
-  return true; // Default to true as requested
+  return true; // Default to true in production as requested
 }
 
 export default function HomePage() {
