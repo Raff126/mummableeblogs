@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin', '/admin/', '/api/'],
     },
-    sitemap: 'https://mummabeeblog.com/sitemap.xml',
+    sitemap: 'https://www.mummabeeblog.com/sitemap.xml',
   };
 }

@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
   const pageTitle = categoryInfo.seoTitle || categoryInfo.name;
   const pageDescription = categoryInfo.seoDescription || categoryInfo.heroIntro;
-  const canonicalUrl = `https://mummabeeblog.com/${params.category}`;
+  const canonicalUrl = `https://www.mummabeeblog.com/${params.category}`;
 
   return {
     title: pageTitle,
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       siteName: 'MummaBeeBlog',
       images: [
         {
-          url: 'https://mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg',
+          url: 'https://www.mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg',
           width: 1200,
           height: 630,
           alt: categoryInfo.name,
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       card: 'summary_large_image',
       title: pageTitle,
       description: pageDescription,
-      images: ['https://mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg'],
+      images: ['https://www.mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg'],
     },
   };
 }

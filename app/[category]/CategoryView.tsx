@@ -150,13 +150,13 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://mummabeeblog.com',
+        item: 'https://www.mummabeeblog.com',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: categoryInfo.name,
-        item: `https://mummabeeblog.com/${categorySlug}`,
+        item: `https://www.mummabeeblog.com/${categorySlug}`,
       },
     ],
   };

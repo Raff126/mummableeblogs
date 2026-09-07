@@ -16,18 +16,18 @@ export const metadata: Metadata = {
     template: "%s | MummaBeeBlog",
   },
   description: "Tested UAE family guides, weekend activities, child-friendly dining, and practical parenting advice from a mum raising two girls across Dubai and Abu Dhabi.",
-  metadataBase: new URL('https://mummabeeblog.com'),
+  metadataBase: new URL('https://www.mummabeeblog.com'),
   alternates: {
-    canonical: 'https://mummabeeblog.com/',
+    canonical: 'https://www.mummabeeblog.com/',
   },
   openGraph: {
     title: 'MummaBeeBlog | UAE Family Life, Kids Activities & Honest Guides',
     description: 'Tested UAE family guides, weekend activities, child-friendly dining, and practical parenting advice from a mum raising two girls across Dubai and Abu Dhabi.',
-    url: 'https://mummabeeblog.com/',
+    url: 'https://www.mummabeeblog.com/',
     siteName: 'MummaBeeBlog',
     images: [
       {
-        url: 'https://mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg',
+        url: 'https://www.mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg',
         width: 1200,
         height: 630,
         alt: 'MummaBeeBlog - UAE Family Guide',
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'MummaBeeBlog | UAE Family Life, Kids Activities & Honest Guides',
     description: 'Tested UAE family guides, weekend activities, child-friendly dining, and practical parenting advice from a mum raising two girls across Dubai and Abu Dhabi.',
-    images: ['https://mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg'],
+    images: ['https://www.mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg'],
   },
   robots: {
     index: true,

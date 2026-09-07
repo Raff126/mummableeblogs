@@ -207,10 +207,10 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
   }
 
   const categoryInfo = CATEGORIES[article.category] || { name: article.category };
-  const canonicalUrl = `https://mummabeeblog.com/${article.category}/${article.slug}`;
+  const canonicalUrl = `https://www.mummabeeblog.com/${article.category}/${article.slug}`;
   const fullImageUrl = article.featuredImage.startsWith('http')
     ? article.featuredImage
-    : `https://mummabeeblog.com${article.featuredImage}`;
+    : `https://www.mummabeeblog.com${article.featuredImage}`;
 
   // Structured Data: Article JSON-LD
   const articleStructuredData = {
@@ -240,13 +240,13 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://mummabeeblog.com',
+        item: 'https://www.mummabeeblog.com',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: categoryInfo.name,
-        item: `https://mummabeeblog.com/${article.category}`,
+        item: `https://www.mummabeeblog.com/${article.category}`,
       },
       {
         '@type': 'ListItem',

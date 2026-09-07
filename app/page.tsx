@@ -15,16 +15,16 @@ export const metadata: Metadata = {
   title: "MummaBeeBlog | UAE Family Guide — Dubai & Abu Dhabi Days Out, Dining & Travel",
   description: "Your honest guide to family life in the UAE. Tested weekend activities, child-friendly dining, resort staycations, and practical parenting advice across Dubai and Abu Dhabi.",
   alternates: {
-    canonical: 'https://mummabeeblog.com',
+    canonical: 'https://www.mummabeeblog.com',
   },
   openGraph: {
     title: 'MummaBeeBlog | UAE Family Guide — Dubai & Abu Dhabi Days Out, Dining & Travel',
     description: 'Your honest guide to family life in the UAE. Tested weekend activities, child-friendly dining, resort staycations, and practical parenting advice across Dubai and Abu Dhabi.',
-    url: 'https://mummabeeblog.com',
+    url: 'https://www.mummabeeblog.com',
     siteName: 'MummaBeeBlog',
     images: [
       {
-        url: 'https://mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg',
+        url: 'https://www.mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg',
         width: 1200,
         height: 630,
         alt: 'MummaBeeBlog - UAE Family Guide',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'MummaBeeBlog | UAE Family Guide — Dubai & Abu Dhabi Days Out, Dining & Travel',
     description: 'Your honest guide to family life in the UAE. Tested weekend activities, child-friendly dining, resort staycations, and practical parenting advice across Dubai and Abu Dhabi.',
-    images: ['https://mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg'],
+    images: ['https://www.mummabeeblog.com/images/358792494_661391199240576_3424351230899219709_n.jpg'],
   },
 };
 

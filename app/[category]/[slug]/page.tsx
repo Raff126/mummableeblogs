@@ -72,10 +72,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const canonicalUrl = `https://mummabeeblog.com/${article.category}/${article.slug}`;
+  const canonicalUrl = `https://www.mummabeeblog.com/${article.category}/${article.slug}`;
   const fullImageUrl = article.featuredImage.startsWith('http')
     ? article.featuredImage
-    : `https://mummabeeblog.com${article.featuredImage}`;
+    : `https://www.mummabeeblog.com${article.featuredImage}`;
 
   return {
     title: article.title,
