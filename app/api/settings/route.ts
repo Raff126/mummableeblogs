@@ -27,9 +27,16 @@ function writeToFile(content: SiteSettings): boolean {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(FILE_PATH, JSON.stringify(content, null, 2), 'utf-8');
+
+    const publicPath = path.join(process.cwd(), 'public', 'data', 'settings.json');
+    const publicDir = path.dirname(publicPath);
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    fs.writeFileSync(publicPath, JSON.stringify(content, null, 2), 'utf-8');
     return true;
   } catch (error) {
-    console.error('Error writing data/settings.json:', error);
+    console.error('Error writing settings.json:', error);
     return false;
   }
 }

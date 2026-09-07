@@ -63,6 +63,7 @@ export interface SiteSettings {
   pinterestUrl: string;
   defaultSeoTitle: string;
   defaultSeoDescription: string;
+  comingSoonMode?: boolean;
 }
 
 export interface HomepageContent {
@@ -149,6 +150,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   pinterestUrl: 'https://ph.pinterest.com/mummabeeblog/',
   defaultSeoTitle: 'MummaBeeBlog | UAE Family Life, Kids Activities & Honest Guides',
   defaultSeoDescription: 'Tested UAE family guides, weekend activities, child-friendly dining, and practical parenting advice from a mum raising two girls across Dubai and Abu Dhabi.',
+  comingSoonMode: true,
 };
 
 export const DEFAULT_HOMEPAGE: HomepageContent = {
@@ -624,8 +626,25 @@ export function getInitialSettings(): SiteSettings {
   }
 }
 
-export function saveSettings(settings: SiteSettings): void {
+export async function saveSettings(settings: SiteSettings): Promise<boolean> {
   safeSetLocalStorage(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('mummabee_content_updated', {
+        detail: { key: STORAGE_KEYS.SETTINGS, data: settings },
+      })
+    );
+    try {
+      await fetch('/api/settings/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+    } catch (e) {
+      console.warn('Could not sync settings with API:', e);
+    }
+  }
+  return true;
 }
 
 export function getInitialHomepage(): HomepageContent {

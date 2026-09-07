@@ -41,41 +41,24 @@ export const metadata: Metadata = {
   },
 };
 
+import fs from 'fs';
+import path from 'path';
+import HomePageView from '../components/HomePageView';
+
+function getInitialComingSoon(): boolean {
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'settings.json');
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      if (typeof data.comingSoonMode === 'boolean') {
+        return data.comingSoonMode;
+      }
+    }
+  } catch (_) {}
+  return true; // Default to true as requested
+}
+
 export default function HomePage() {
-  return (
-    <>
-      {/* 1. SEARCH-FRIENDLY HERO — Clear UAE Family Promise */}
-      <HeroSection />
-
-      {/* 2. QUICK LINKS TO POPULAR AUDIENCE NEEDS — "What are you looking for?" */}
-      <DiscoverySection />
-
-      {/* 3. FEATURED UAE FAMILY GUIDES — "Plan your next family day" (Curated DUBAI, EAT, SCHOOL) */}
-      <FeaturedGuidesSection />
-
-      {/* 4. RECENT BLOGS — Newest Published Content (Initial 4 + Dynamic "Load More →") */}
-      <RecentBlogsSection />
-
-      {/* 5. EXPLORE BY TOPIC OR LOCATION — Topic & City Discovery */}
-      <ExploreByTopicLocation />
-
-      {/* 6. SHORT CREDIBILITY INTRODUCTION TO MUMMA BEE — "Hi, I'm Donne" */}
-      <DonneSection />
-
-      {/* 7. THE EXPAT EDIT — Curated Essentials for International UAE Families */}
-      <ExpatEditSection />
-
-      {/* 8. REAL PARTNERSHIP OR READER PROOF — Trust & Testing Standards */}
-      <CredibilitySection />
-
-      {/* 8. INSTAGRAM / RECENT MOMENTS — Community Visual Diary */}
-      <InstagramSection />
-
-      {/* 9. DISCOUNT CODES & EXCLUSIVE FAMILY DEALS */}
-      <DiscountCodesSection placement="homepage" />
-
-      {/* 10. NEWSLETTER — Clear Benefit-Led Friday Digest Invitation */}
-      <NewsletterBand />
-    </>
-  );
+  const isComingSoon = getInitialComingSoon();
+  return <HomePageView initialComingSoon={isComingSoon} />;
 }

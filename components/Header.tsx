@@ -1,15 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PRIMARY_NAV, SOCIAL_LINKS } from '../data/nav';
+import { getInitialSettings, STORAGE_KEYS } from '../data/store';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isComingSoon, setIsComingSoon] = useState<boolean>(true);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const s = getInitialSettings();
+    if (typeof s.comingSoonMode === 'boolean') {
+      setIsComingSoon(s.comingSoonMode);
+    }
+    const handleUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.key === STORAGE_KEYS.SETTINGS) {
+        setIsComingSoon(customEvent.detail?.data?.comingSoonMode !== false);
+      }
+    };
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    return () => window.removeEventListener('mummabee_content_updated', handleUpdate);
+  }, []);
+
+  if (pathname?.startsWith('/admin') || pathname === '/coming-soon') {
+    return null;
+  }
+
+  if (isComingSoon) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-xs">

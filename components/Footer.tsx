@@ -1,7 +1,38 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { PRIMARY_NAV, SOCIAL_LINKS } from '../data/nav';
+import { getInitialSettings, STORAGE_KEYS } from '../data/store';
 
 export default function Footer() {
+  const [isComingSoon, setIsComingSoon] = useState<boolean>(true);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const s = getInitialSettings();
+    if (typeof s.comingSoonMode === 'boolean') {
+      setIsComingSoon(s.comingSoonMode);
+    }
+    const handleUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.key === STORAGE_KEYS.SETTINGS) {
+        setIsComingSoon(customEvent.detail?.data?.comingSoonMode !== false);
+      }
+    };
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    return () => window.removeEventListener('mummabee_content_updated', handleUpdate);
+  }, []);
+
+  if (pathname?.startsWith('/admin') || pathname === '/coming-soon') {
+    return null;
+  }
+
+  if (isComingSoon) {
+    return null;
+  }
+
   return (
     <footer className="bg-[#683846] text-white pt-16 pb-12 border-t border-[#B75B70]/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

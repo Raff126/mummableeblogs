@@ -92,7 +92,7 @@ export default function AdminSettingsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      saveSettings(settings);
+      await saveSettings(settings);
       saveAuthorizedAdminEmails(adminEmails);
       setMessage('Settings updated successfully!');
       setTimeout(() => setMessage(''), 3500);
@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="font-serif text-3xl font-bold text-[#683846]">Site Settings</h1>
         <p className="text-xs text-[#332D2F]/70 font-sans mt-0.5">
-          Configure site information, contact emails, social channels, and default SEO settings.
+          Configure site information, maintenance / coming soon status, social channels, and default SEO settings.
         </p>
       </div>
 
@@ -120,6 +120,61 @@ export default function AdminSettingsPage() {
       )}
 
       <form onSubmit={handleSave} className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-soft space-y-6 font-sans">
+        {/* Website Public Status / Coming Soon Mode */}
+        <div className="bg-[#FBF4F5] border border-[#B75B70]/20 rounded-2xl p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base">
+                  {settings.comingSoonMode ? '🚧' : '🌐'}
+                </span>
+                <h2 className="font-serif text-lg font-bold text-[#683846]">
+                  Website Status: {settings.comingSoonMode ? 'Coming Soon Mode (Active)' : 'Live Public Website'}
+                </h2>
+              </div>
+              <p className="text-xs text-[#332D2F]/75 mt-1 leading-relaxed max-w-md">
+                {settings.comingSoonMode
+                  ? 'Public visitors will see the Coming Soon landing page with email signup. Admin and CMS routes remain fully accessible to you and your team.'
+                  : 'The website is publicly live. All articles, categories, and homepage sections are visible to everyone.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 self-start sm:self-center">
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, comingSoonMode: !settings.comingSoonMode })}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  settings.comingSoonMode ? 'bg-[#DF2A64]' : 'bg-gray-300'
+                }`}
+                role="switch"
+                aria-checked={settings.comingSoonMode}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    settings.comingSoonMode ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className="text-xs font-bold text-[#683846]">
+                {settings.comingSoonMode ? 'Coming Soon ON' : 'Live ON'}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-[#B75B70]/15 flex items-center justify-between text-[11px]">
+            <span className="text-[#332D2F]/70">
+              Preview how visitors see the Coming Soon page:
+            </span>
+            <Link
+              href="/coming-soon"
+              target="_blank"
+              className="font-bold text-[#B75B70] hover:text-[#DF2A64] underline flex items-center gap-1"
+            >
+              <span>View Coming Soon Page ↗</span>
+            </Link>
+          </div>
+        </div>
+
         {/* General Info */}
         <div className="space-y-4">
           <h2 className="font-serif text-xl font-bold text-[#683846] border-b border-gray-100 pb-2">
