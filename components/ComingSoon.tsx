@@ -52,15 +52,7 @@ export default function ComingSoon() {
         }}
       />
 
-      {/* Top Spacer */}
-      <div className="w-full flex justify-end items-center max-w-4xl pt-2">
-        <Link
-          href="/admin/login"
-          className="text-[11px] font-medium text-[#B75B70]/60 hover:text-[#683846] transition-colors px-3 py-1.5 rounded-full hover:bg-white/60"
-        >
-          Staff / Admin Login →
-        </Link>
-      </div>
+
 
       {/* Main Card */}
       <main className="max-w-[680px] w-full my-auto flex flex-col items-center relative z-10 px-4">
