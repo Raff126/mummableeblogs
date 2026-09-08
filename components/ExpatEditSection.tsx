@@ -18,15 +18,43 @@ export default function ExpatEditSection() {
     const isExpat = (cat: string) => cat === 'the-expat-edit' || cat === 'expat-edit';
     const isPublished = (a: ArticleItem) => !a.isDraft && a.status !== 'draft' && !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug));
 
-    const initial = all.filter((a) => isExpat(a.category) && isPublished(a)).slice(0, 4);
+    // The curated expat guides order
+    const preferredSlugs = [
+      'how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
+      'choosing-between-british-ib-and-american-curriculums-in-the-uae',
+      'how-we-handle-seasonal-transitions-and-summer-months-with-kids',
+      'our-daily-uae-family-routine-balancing-school-heat-and-activities',
+    ];
+
+    const pickPublishedExpatGuides = (list: ArticleItem[]) => {
+      const published = list.filter((a) => isExpat(a.category) && isPublished(a));
+      const sorted: ArticleItem[] = [];
+      const remaining: ArticleItem[] = [];
+
+      for (const pSlug of preferredSlugs) {
+        const found = published.find((a) => a.slug === pSlug);
+        if (found) {
+          sorted.push(found);
+        }
+      }
+
+      for (const item of published) {
+        if (!sorted.some((s) => s.id === item.id || s.slug === item.slug)) {
+          remaining.push(item);
+        }
+      }
+
+      return [...sorted, ...remaining].slice(0, 4);
+    };
+
+    const initial = pickPublishedExpatGuides(all);
     setGuides(initial);
 
     try {
       const server = await loadArticlesFromServer();
       if (Array.isArray(server) && server.length > 0) {
-        const curDeleted = getDeletedArticleIds();
-        const serverPublished = server.filter((a) => isExpat(a.category) && !a.isDraft && a.status !== 'draft' && !curDeleted.has(a.id) && (!a.slug || !curDeleted.has(a.slug)));
-        setGuides(serverPublished.slice(0, 4));
+        const serverPublished = pickPublishedExpatGuides(server);
+        setGuides(serverPublished);
       }
     } catch (_) {}
   };
