@@ -11,6 +11,7 @@ import {
   getDeletedArticleIds,
   setGoodToKnowVisibility,
   isGoodToKnowVisibleForArticle,
+  loadArticlesFromServer,
   Article,
   MediaItem,
 } from '../../../../data/store';
@@ -189,21 +190,11 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
 
     try {
       let allArticles = getInitialArticles();
-      const isLocal = typeof window !== 'undefined' && (
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1'
-      );
-      const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
+      // Fetch latest from Firestore/server for accurate merge
       try {
-        const apiRes = await fetch(endpoint, { cache: 'no-store' });
-        if (apiRes.ok) {
-          const list = await apiRes.json();
-          if (Array.isArray(list) && list.length > 0) {
-            allArticles = list;
-          }
-        }
+        allArticles = await loadArticlesFromServer();
       } catch (fetchErr) {
-        // Fallback to allArticles
+        // Fallback to local articles
       }
 
       let updated: ArticleItem[];
@@ -270,25 +261,25 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Top Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link href="/admin/articles" className="text-xs font-bold text-[#B75B70] hover:underline mb-1 inline-block">
             ← Back to Articles
           </Link>
-          <h1 className="font-serif text-3xl font-bold text-[#683846]">Edit Article</h1>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">Edit Article</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => handleSave(true)}
             disabled={isSaving}
-            className="px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save Draft'}
           </button>
           <button
             onClick={() => handleSave(false)}
             disabled={isSaving}
-            className="btn-primary disabled:opacity-50"
+            className="flex-1 sm:flex-none btn-primary disabled:opacity-50"
           >
             {isSaving ? 'Updating...' : 'Update & Publish'}
           </button>

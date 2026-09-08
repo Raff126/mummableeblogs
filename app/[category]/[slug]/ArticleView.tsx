@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getArticleBySlug, getAllArticles, ArticleItem } from '../../../data/articles';
-import { getInitialArticles, getDeletedArticleIds, isGoodToKnowVisibleForArticle } from '../../../data/store';
+import { getInitialArticles, getDeletedArticleIds, isGoodToKnowVisibleForArticle, loadArticlesFromServer } from '../../../data/store';
 import { CATEGORIES } from '../../../data/categories';
 import GuideCard from '../../../components/GuideCard';
 import NewsletterBand from '../../../components/NewsletterBand';
@@ -41,7 +41,7 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
     return categorySlug;
   };
 
-  const refreshArticle = () => {
+  const refreshArticle = async () => {
     const effectiveSlug = getEffectiveSlug();
     if (!effectiveSlug) return;
 
@@ -127,26 +127,27 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       return;
     }
 
-    // 4. Try fetching from static articles.json (works in static export)
-    fetch(`/data/articles.json?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data: ArticleItem[]) => {
-        if (Array.isArray(data)) {
-          const validData = data.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)));
-          const apiFound = findArticle(validData);
-          if (apiFound) {
-            setArticle(apiFound);
-            const related = validData
-              .filter((a) => a.category === apiFound.category && a.slug !== apiFound.slug && !a.isDraft)
-              .slice(0, 4);
-            setRelatedArticles(related);
-          } else {
-            setArticle(null);
-          }
+    // 4. Try fetching from Firestore / server
+    try {
+      const serverArticles = await loadArticlesFromServer();
+      if (serverArticles.length > 0) {
+        const validData = serverArticles.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)));
+        const apiFound = findArticle(validData);
+        if (apiFound) {
+          setArticle(apiFound);
+          const related = validData
+            .filter((a) => a.category === apiFound.category && a.slug !== apiFound.slug && !a.isDraft)
+            .slice(0, 4);
+          setRelatedArticles(related);
+        } else {
+          setArticle(null);
         }
-      })
-      .catch((err) => console.error('Error fetching article from static JSON:', err))
-      .finally(() => setIsLoading(false));
+      }
+    } catch (err) {
+      console.error('Error fetching article from server:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

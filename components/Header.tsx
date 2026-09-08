@@ -174,7 +174,7 @@ export default function Header() {
 
       {/* Search Overlay */}
       {searchOpen && (
-        <div className="fixed inset-0 z-50 bg-[#332D2F]/60 backdrop-blur-xs flex items-start justify-center pt-24 px-4">
+        <div className="fixed inset-0 z-50 bg-[#332D2F]/60 backdrop-blur-xs flex items-start justify-center pt-16 sm:pt-24 px-4">
           <div className="bg-white w-full max-w-xl rounded-3xl p-6 shadow-2xl border border-gray-100 relative">
             <button
               onClick={() => setSearchOpen(false)}

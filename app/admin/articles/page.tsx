@@ -9,8 +9,10 @@ import {
   getDeletedArticleIds,
   setGoodToKnowVisibility,
   isGoodToKnowVisibleForArticle,
+  loadArticlesFromServer,
   Article
 } from '../../../data/store';
+import { seedFirestoreIfEmpty, FirestoreArticle } from '../../../utils/firestoreArticles';
 import { CATEGORIES } from '../../../data/categories';
 
 export default function AdminArticlesPage() {
@@ -22,65 +24,46 @@ export default function AdminArticlesPage() {
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'TITLE'>('NEWEST');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const loadLatestArticles = () => {
+  const loadLatestArticles = async () => {
+    // 1. Show localStorage data immediately
     const local = getInitialArticles();
     setArticles(local);
+    setIsLoading(false);
 
-    const isLocal = typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1'
-    );
-    const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
+    // 2. Fetch from Firestore (or API on localhost) and merge
+    try {
+      const serverArticles = await loadArticlesFromServer();
+      if (serverArticles.length > 0) {
+        setArticles(serverArticles);
 
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => res.ok ? res.json() : null)
-      .then((serverArticles: Article[] | null) => {
-        if (Array.isArray(serverArticles) && serverArticles.length > 0) {
-          const deleted = getDeletedArticleIds();
-          const currentLocal = getInitialArticles();
-          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
-
-          // Only merge server articles that are not deleted and not already customized in local storage
-          let hasNew = false;
-          const merged = [...currentLocal];
-          for (const sArt of serverArticles) {
-            if (deleted.has(sArt.id) || (sArt.slug && deleted.has(sArt.slug))) {
-              continue;
-            }
-            if (!localMap.has(sArt.id)) {
-              merged.push(sArt);
-              localMap.set(sArt.id, sArt);
-              hasNew = true;
-            }
-          }
-
-          if (hasNew) {
-            setArticles(merged);
-            try {
-              localStorage.setItem('mummabee_articles', JSON.stringify(merged));
-            } catch (_) {}
-          }
+        // Seed Firestore if it's empty (first-time setup)
+        if (local.length > 0 && serverArticles.length === local.length) {
+          seedFirestoreIfEmpty(local as FirestoreArticle[]).catch(() => {});
         }
-      })
-      .catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Server fetch failed, using localStorage:', err);
+    }
   };
 
   useEffect(() => {
     loadLatestArticles();
 
     const handleUpdate = () => {
-      loadLatestArticles();
+      const latest = getInitialArticles();
+      setArticles(latest);
     };
 
     window.addEventListener('mummabee_content_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
-    window.addEventListener('focus', handleUpdate);
+    window.addEventListener('focus', () => loadLatestArticles());
 
     return () => {
       window.removeEventListener('mummabee_content_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
-      window.removeEventListener('focus', handleUpdate);
+      window.removeEventListener('focus', () => loadLatestArticles());
     };
   }, []);
 
@@ -164,7 +147,7 @@ export default function AdminArticlesPage() {
             Create, edit, search, publish, and delete blog articles.
           </p>
         </div>
-        <Link href="/admin/articles/new/" className="btn-primary">
+        <Link href="/admin/articles/new/" className="btn-primary text-center">
           + Create New Article
         </Link>
       </div>
@@ -176,9 +159,9 @@ export default function AdminArticlesPage() {
       )}
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs flex flex-col md:flex-row items-center gap-3">
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs flex flex-col gap-3">
         {/* Search */}
-        <div className="flex-1 w-full">
+        <div className="w-full">
           <input
             type="search"
             placeholder="Search articles by title..."
@@ -188,54 +171,146 @@ export default function AdminArticlesPage() {
           />
         </div>
 
-        {/* Filter Category */}
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-full md:w-auto px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
-        >
-          <option value="ALL">All Categories</option>
-          {Object.entries(CATEGORIES).filter(([catSlug]) => catSlug !== 'expat-edit').map(([catSlug, info]) => (
-            <option key={catSlug} value={catSlug}>{info.name}</option>
-          ))}
-        </select>
+        {/* Filters Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {/* Filter Category */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
+          >
+            <option value="ALL">All Categories</option>
+            {Object.entries(CATEGORIES).filter(([catSlug]) => catSlug !== 'expat-edit').map(([catSlug, info]) => (
+              <option key={catSlug} value={catSlug}>{info.name}</option>
+            ))}
+          </select>
 
-        {/* Filter Status */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full md:w-auto px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
-        >
-          <option value="ALL">All Status</option>
-          <option value="PUBLISHED">Live / Published</option>
-          <option value="DRAFT">Drafts</option>
-        </select>
+          {/* Filter Status */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
+          >
+            <option value="ALL">All Status</option>
+            <option value="PUBLISHED">Live / Published</option>
+            <option value="DRAFT">Drafts</option>
+          </select>
 
-        {/* Filter Good to Know */}
-        <select
-          value={gtkFilter}
-          onChange={(e) => setGtkFilter(e.target.value)}
-          className="w-full md:w-auto px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
-        >
-          <option value="ALL">📌 Good to Know: All</option>
-          <option value="SHOWN">📌 Good to Know: Shown (ON)</option>
-          <option value="HIDDEN">✕ Good to Know: Hidden (OFF)</option>
-        </select>
+          {/* Filter Good to Know */}
+          <select
+            value={gtkFilter}
+            onChange={(e) => setGtkFilter(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
+          >
+            <option value="ALL">📌 GTK: All</option>
+            <option value="SHOWN">📌 GTK: ON</option>
+            <option value="HIDDEN">✕ GTK: OFF</option>
+          </select>
 
-        {/* Sort */}
-        <select
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value as any)}
-          className="w-full md:w-auto px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
-        >
-          <option value="NEWEST">Newest First</option>
-          <option value="OLDEST">Oldest First</option>
-          <option value="TITLE">By Title (A-Z)</option>
-        </select>
+          {/* Sort */}
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as any)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs font-sans font-semibold text-[#332D2F] bg-white"
+          >
+            <option value="NEWEST">Newest First</option>
+            <option value="OLDEST">Oldest First</option>
+            <option value="TITLE">By Title (A-Z)</option>
+          </select>
+        </div>
       </div>
 
-      {/* Articles Table Card */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden font-sans text-xs">
+      {/* Loading State */}
+      {isLoading && (
+        <div className="text-center py-8 text-xs text-[#332D2F]/60">
+          <div className="w-6 h-6 border-2 border-[#B75B70] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          Loading articles...
+        </div>
+      )}
+
+      {/* ========== MOBILE CARD VIEW (below md) ========== */}
+      <div className="md:hidden space-y-3">
+        {filtered.length > 0 ? (
+          filtered.map((art) => {
+            const catInfo = CATEGORIES[art.category];
+            const isGtkOn = isGoodToKnowVisibleForArticle(art);
+            return (
+              <div key={art.id} className="bg-white rounded-2xl border border-gray-100 shadow-2xs p-4 space-y-3">
+                {/* Top Row: Image + Title */}
+                <div className="flex items-start gap-3">
+                  <img
+                    src={art.featuredImage}
+                    alt={art.title}
+                    className="w-14 h-14 rounded-xl object-cover border border-gray-100 flex-shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/images/mama-logo.png'; }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-serif text-sm font-bold text-[#683846] line-clamp-2">{art.title}</h3>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-[10px] font-semibold text-[#B75B70]">{catInfo ? catInfo.name : art.category}</span>
+                      <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                        art.isDraft ? 'bg-amber-100 text-amber-800' : 'bg-[#F8EDEF] text-[#683846] border border-[#D7BB91]'
+                      }`}>
+                        {art.isDraft ? 'Draft' : 'Published'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Row */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleGoodToKnow(art)}
+                    className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full ${
+                      isGtkOn
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                        : 'bg-gray-100 text-gray-500 border border-gray-300'
+                    }`}
+                  >
+                    {isGtkOn ? '📌 ON' : '✕ OFF'}
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      href={`/${art.category}/${art.slug}/`}
+                      target="_blank"
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-[#332D2F] bg-gray-50 border border-gray-200"
+                    >
+                      Preview
+                    </Link>
+                    <button
+                      onClick={() => handleTogglePublish(art.id)}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-[#B75B70] bg-[#F8EDEF] border border-[#B75B70]/20"
+                    >
+                      {art.isDraft ? 'Publish' : 'Unpublish'}
+                    </button>
+                    <Link
+                      href={`/admin/articles/${art.id}/`}
+                      className="px-2 py-1 rounded-lg text-[10px] font-bold text-white bg-[#683846]"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => setDeleteConfirmId(art.id)}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="py-12 text-center text-[#332D2F]/60 text-xs">
+            No articles found matching your criteria.
+          </div>
+        )}
+      </div>
+
+      {/* ========== DESKTOP TABLE VIEW (md and above) ========== */}
+      <div className="hidden md:block bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden font-sans text-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -261,6 +336,7 @@ export default function AdminArticlesPage() {
                             src={art.featuredImage}
                             alt={art.title}
                             className="w-12 h-12 rounded-xl object-cover border border-gray-100 flex-shrink-0"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/mama-logo.png'; }}
                           />
                           <div>
                             <h3 className="font-serif text-sm font-bold text-[#683846] line-clamp-1">{art.title}</h3>

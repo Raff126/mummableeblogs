@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArticleItem, getAllArticles } from '../data/articles';
-import { getInitialArticles, getDeletedArticleIds } from '../data/store';
+import { getInitialArticles, getDeletedArticleIds, loadArticlesFromServer } from '../data/store';
 import GuideCard from './GuideCard';
 
 export default function LatestGuidesSection() {
@@ -11,7 +11,7 @@ export default function LatestGuidesSection() {
   const [visibleCount, setVisibleCount] = useState<number>(4);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const refreshArticles = () => {
+  const refreshArticles = async () => {
     const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
     const published = (local.length > 0 ? local : getAllArticles()).filter(
@@ -28,40 +28,23 @@ export default function LatestGuidesSection() {
     setArticles(sorted);
     setIsLoading(false);
 
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => res.ok ? res.json() : null)
-      .then((apiArticles: ArticleItem[]) => {
-        if (Array.isArray(apiArticles) && apiArticles.length > 0) {
-          const currentDeleted = getDeletedArticleIds();
-          const currentLocal = getInitialArticles();
-          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
-
-          const merged = [...currentLocal];
-          for (const sArt of apiArticles) {
-            if (currentDeleted.has(sArt.id) || (sArt.slug && currentDeleted.has(sArt.slug))) {
-              continue;
-            }
-            if (!localMap.has(sArt.id)) {
-              merged.push(sArt);
-              localMap.set(sArt.id, sArt);
-            }
-          }
-
-          const apiPublished = merged.filter(
-            (a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && !a.isDraft
-          );
-          const apiSorted = [...apiPublished].sort((a, b) => {
-            const timeA = new Date(a.publishedAt).getTime() || 0;
-            const timeB = new Date(b.publishedAt).getTime() || 0;
-            if (timeB !== timeA) return timeB - timeA;
-            return b.id.localeCompare(a.id);
-          });
-          setArticles(apiSorted);
-        }
-      })
-      .catch(() => {});
+    // Fetch latest from Firestore/server and update
+    try {
+      const serverArticles = await loadArticlesFromServer();
+      if (serverArticles.length > 0) {
+        const currentDeleted = getDeletedArticleIds();
+        const apiPublished = serverArticles.filter(
+          (a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && !a.isDraft
+        );
+        const apiSorted = [...apiPublished].sort((a, b) => {
+          const timeA = new Date(a.publishedAt).getTime() || 0;
+          const timeB = new Date(b.publishedAt).getTime() || 0;
+          if (timeB !== timeA) return timeB - timeA;
+          return b.id.localeCompare(a.id);
+        });
+        setArticles(apiSorted);
+      }
+    } catch (_) {}
   };
 
   useEffect(() => {
@@ -110,8 +93,8 @@ export default function LatestGuidesSection() {
           </Link>
         </div>
 
-        {/* 3 Featured Editorial Cards Matching Exact Reference Screenshot */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* 3 Featured Editorial Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {/* Card 1: DUBAI (Berry Pink) */}
           <Link
             href="/uae-with-kids/10-family-friendly-things-to-do-in-dubai-this-weekend"

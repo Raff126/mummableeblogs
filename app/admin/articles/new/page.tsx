@@ -10,6 +10,7 @@ import {
   saveMedia,
   getDeletedArticleIds,
   setGoodToKnowVisibility,
+  loadArticlesFromServer,
   Article,
   MediaItem,
 } from '../../../../data/store';
@@ -147,33 +148,12 @@ export default function AdminNewArticlePage() {
     setError('');
 
     try {
-      // Fetch latest articles
+      // Fetch latest articles from Firestore/server
       let currentArticles = getInitialArticles();
-      const isLocal = typeof window !== 'undefined' && (
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1'
-      );
-      const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
       try {
-        const apiRes = await fetch(endpoint, { cache: 'no-store' });
-        if (apiRes.ok) {
-          const list = await apiRes.json();
-          if (Array.isArray(list) && list.length > 0) {
-            const deleted = getDeletedArticleIds();
-            const localMap = new Map(currentArticles.map((a) => [a.id, a]));
-            const merged = [...currentArticles];
-            for (const sArt of list) {
-              if (deleted.has(sArt.id) || (sArt.slug && deleted.has(sArt.slug))) continue;
-              if (!localMap.has(sArt.id)) {
-                merged.push(sArt);
-                localMap.set(sArt.id, sArt);
-              }
-            }
-            currentArticles = merged;
-          }
-        }
+        currentArticles = await loadArticlesFromServer();
       } catch (fetchErr) {
-        // Fallback to currentArticles
+        // Fallback to local articles
       }
 
       const slugBase = title
@@ -239,25 +219,25 @@ export default function AdminNewArticlePage() {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Top Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link href="/admin" className="text-xs font-bold text-[#B75B70] hover:underline mb-1 inline-block">
             ← Back to Dashboard
           </Link>
-          <h1 className="font-serif text-3xl font-bold text-[#683846]">Write New Blog Post</h1>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">Write New Blog Post</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => handleSave(true)}
             disabled={isSaving}
-            className="px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save as Draft'}
           </button>
           <button
             onClick={() => handleSave(false)}
             disabled={isSaving}
-            className="btn-primary disabled:opacity-50"
+            className="flex-1 sm:flex-none btn-primary disabled:opacity-50"
           >
             {isSaving ? 'Publishing...' : 'Publish Post 🚀'}
           </button>

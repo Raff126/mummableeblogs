@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCjqqHt_JbrXV68p6YG1911c5qRbGPAfhM',
@@ -19,6 +20,17 @@ export const getFirebaseAuth = (): Auth | null => {
     return getAuth(app);
   } catch (err) {
     console.error('Firebase Auth initialization error:', err);
+    return null;
+  }
+};
+
+/** Firestore database instance for persistent CMS data storage */
+export const getFirebaseDb = (): Firestore | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return getFirestore(app);
+  } catch (err) {
+    console.error('Firestore initialization error:', err);
     return null;
   }
 };

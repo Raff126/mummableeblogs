@@ -140,11 +140,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </button>
       </div>
 
+      {/* Sidebar overlay for mobile — click to close */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-black/30"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
         className={`${
-          mobileMenuOpen ? 'block' : 'hidden'
-        } md:block w-full md:w-64 bg-white border-r border-[#B75B70]/15 flex-shrink-0 flex flex-col justify-between shadow-soft min-h-[calc(100vh-60px)] md:min-h-screen`}
+          mobileMenuOpen ? 'block fixed inset-x-0 top-[60px] z-40 max-h-[calc(100vh-60px)] overflow-y-auto' : 'hidden'
+        } md:block md:relative md:max-h-none w-full md:w-64 bg-white border-r border-[#B75B70]/15 flex-shrink-0 flex flex-col justify-between shadow-soft md:min-h-screen`}
       >
         <div>
           {/* Admin Header & Current Role Badge */}

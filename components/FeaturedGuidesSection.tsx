@@ -23,7 +23,7 @@ export default function FeaturedGuidesSection() {
         </div>
 
         {/* 3 Featured Editorial Cards Matching Exact Reference Screenshot */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Card 1: DUBAI (Berry Pink) */}
           <Link
             href="/uae-with-kids/10-family-friendly-things-to-do-in-dubai-this-weekend"
