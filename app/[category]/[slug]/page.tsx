@@ -12,7 +12,7 @@ interface PageProps {
 export const dynamicParams = true;
 
 export function generateStaticParams() {
-  const articles = getAllArticles().filter((a) => a.slug && a.category);
+  const articles = getAllArticles().filter((a) => a.slug && a.category && !a.isDraft && a.status !== 'draft');
   const params: { category: string; slug: string }[] = [];
   const seen = new Set<string>();
 
@@ -109,7 +109,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default function ArticlePage({ params }: PageProps) {
-  const initialArticle = params.slug === '__fallback__' ? null : (getArticleBySlug(params.slug) || null);
+  const rawArticle = params.slug === '__fallback__' ? null : (getArticleBySlug(params.slug) || null);
+  const isDraft = Boolean(rawArticle && (rawArticle.isDraft || rawArticle.status === 'draft'));
+  const initialArticle = isDraft ? null : rawArticle;
 
   return (
     <ArticleView

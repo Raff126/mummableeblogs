@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  const topGuides = getAllArticles().filter((a) => !a.isDraft).slice(0, 4);
+  const topGuides = getAllArticles().filter((a) => !a.isDraft && a.status !== 'draft').slice(0, 4);
 
   return <AboutView topGuides={topGuides} />;
 }

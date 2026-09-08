@@ -1,50 +1,56 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { ArticleItem, getAllArticles } from '../data/articles';
+import { getInitialArticles, getDeletedArticleIds, loadArticlesFromServer } from '../data/store';
+
+const BADGE_COLORS = ['bg-[#B75B70]', 'bg-[#4D7987]', 'bg-[#D79A30]', 'bg-[#683846]'];
 
 export default function ExpatEditSection() {
-  const expatGuides = [
-    {
-      id: 'expat-1',
-      badge: 'COMMUNITY & FRIENDSHIPS',
-      title: 'How to Build a Supportive Mum Village as an Expat',
-      category: 'The Expat Edit',
-      readTime: '4 min read',
-      image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&fit=crop&q=80',
-      link: '/the-expat-edit/how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
-      bgColor: 'bg-[#B75B70]',
-    },
-    {
-      id: 'expat-2',
-      badge: 'SCHOOL & EDUCATION',
-      title: 'Choosing Between British, IB, & American Curriculums',
-      category: 'The Expat Edit',
-      readTime: '6 min read',
-      image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&fit=crop&q=80',
-      link: '/the-expat-edit/choosing-between-british-ib-and-american-curriculums-in-the-uae',
-      bgColor: 'bg-[#4D7987]',
-    },
-    {
-      id: 'expat-3',
-      badge: 'UAE LIVING & SEASONS',
-      title: 'Handling Seasonal Transitions & Summer with Kids',
-      category: 'The Expat Edit',
-      readTime: '4 min read',
-      image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=800&fit=crop&q=80',
-      link: '/the-expat-edit/how-we-handle-seasonal-transitions-and-summer-months-with-kids',
-      bgColor: 'bg-[#D79A30]',
-    },
-    {
-      id: 'expat-4',
-      badge: 'PARENTING & ROUTINES',
-      title: 'Our Daily UAE Family Routine: School & Heat',
-      category: 'The Expat Edit',
-      readTime: '4 min read',
-      image: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&fit=crop&q=80',
-      link: '/the-expat-edit/our-daily-uae-family-routine-balancing-school-heat-and-activities',
-      bgColor: 'bg-[#683846]',
-    },
-  ];
+  const [guides, setGuides] = useState<ArticleItem[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  const refreshGuides = async () => {
+    const deleted = getDeletedArticleIds();
+    const local = getInitialArticles();
+    const all = local.length > 0 ? local : getAllArticles();
+    const isExpat = (cat: string) => cat === 'the-expat-edit' || cat === 'expat-edit';
+    const isPublished = (a: ArticleItem) => !a.isDraft && a.status !== 'draft' && !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug));
+
+    const initial = all.filter((a) => isExpat(a.category) && isPublished(a)).slice(0, 4);
+    setGuides(initial);
+
+    try {
+      const server = await loadArticlesFromServer();
+      if (Array.isArray(server) && server.length > 0) {
+        const curDeleted = getDeletedArticleIds();
+        const serverPublished = server.filter((a) => isExpat(a.category) && !a.isDraft && a.status !== 'draft' && !curDeleted.has(a.id) && (!a.slug || !curDeleted.has(a.slug)));
+        setGuides(serverPublished.slice(0, 4));
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    refreshGuides();
+
+    const handleUpdate = () => refreshGuides();
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
+  }, []);
+
+  // Never show draft or empty cards to visitors
+  if (guides.length === 0) {
+    return null;
+  }
 
   return (
     <section id="expat-edit" className="py-16 sm:py-20 bg-[#F8EDEF]/40 border-b border-gray-100">
@@ -71,47 +77,54 @@ export default function ExpatEditSection() {
           </Link>
         </div>
 
-        {/* 4 Featured Expat Cards */}
+        {/* Dynamic Published Expat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {expatGuides.map((guide) => (
-            <Link
-              key={guide.id}
-              href={guide.link}
-              className="group bg-white rounded-[24px] border border-gray-100 shadow-soft hover:shadow-soft-hover hover:-translate-y-1 transition-all overflow-hidden flex flex-col"
-            >
-              {/* Image Container */}
-              <div className="relative h-48 overflow-hidden bg-gray-100">
-                <img
-                  src={guide.image}
-                  alt={guide.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className={`absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white px-3 py-1 rounded-full shadow-xs ${guide.bgColor}`}>
-                  {guide.badge}
-                </span>
-              </div>
+          {guides.map((guide, idx) => {
+            const badge = guide.subcategory || (idx === 0 ? 'COMMUNITY & FRIENDSHIPS' : idx === 1 ? 'SCHOOL & EDUCATION' : idx === 2 ? 'UAE LIVING & SEASONS' : 'PARENTING & ROUTINES');
+            const bgColor = BADGE_COLORS[idx % BADGE_COLORS.length];
+            const link = `/${guide.category}/${guide.slug}`;
 
-              {/* Text Container */}
-              <div className="p-6 space-y-2 flex-1 flex flex-col justify-between bg-white">
-                <div>
-                  <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block mb-1">
-                    {guide.category}
-                  </span>
-                  <h3 className="font-serif text-lg font-bold text-[#332D2F] group-hover:text-[#B75B70] transition-colors leading-snug">
-                    {guide.title}
-                  </h3>
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-[11px] text-[#332D2F]/60 font-sans">
-                  <span>{guide.readTime}</span>
-                  <span className="font-bold text-[#B75B70] group-hover:translate-x-1 transition-transform">
-                    Read Guide →
+            return (
+              <Link
+                key={guide.id || guide.slug}
+                href={link}
+                className="group bg-white rounded-[24px] border border-gray-100 shadow-soft hover:shadow-soft-hover hover:-translate-y-1 transition-all overflow-hidden flex flex-col"
+              >
+                {/* Image Container */}
+                <div className="relative h-48 overflow-hidden bg-gray-100">
+                  <img
+                    src={guide.featuredImage}
+                    alt={guide.imageAlt || guide.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/images/mama-logo.png'; }}
+                  />
+                  <span className={`absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white px-3 py-1 rounded-full shadow-xs ${bgColor}`}>
+                    {badge}
                   </span>
                 </div>
-              </div>
-            </Link>
-          ))}
+
+                {/* Text Container */}
+                <div className="p-6 space-y-2 flex-1 flex flex-col justify-between bg-white">
+                  <div>
+                    <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block mb-1">
+                      The Expat Edit
+                    </span>
+                    <h3 className="font-serif text-lg font-bold text-[#332D2F] group-hover:text-[#B75B70] transition-colors leading-snug line-clamp-2">
+                      {guide.title}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-[11px] text-[#332D2F]/60 font-sans">
+                    <span>{guide.readTime || '4 min read'}</span>
+                    <span className="font-bold text-[#B75B70] group-hover:translate-x-1 transition-transform">
+                      Read Guide →
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

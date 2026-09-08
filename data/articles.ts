@@ -79,10 +79,10 @@ export function getArticleBySlug(slug: string): ArticleItem | undefined {
 
 export function getArticlesByCategory(categorySlug: string): ArticleItem[] {
   const all = getAllArticles();
-  return all.filter((a) => a.category === categorySlug && !a.isDraft);
+  return all.filter((a) => a.category === categorySlug && !a.isDraft && a.status !== 'draft');
 }
 
 export function getRelatedArticles(currentSlug: string, categorySlug: string, count = 4): ArticleItem[] {
   const all = getAllArticles();
-  return all.filter((a) => a.category === categorySlug && a.slug !== currentSlug && !a.isDraft).slice(0, count);
+  return all.filter((a) => a.category === categorySlug && a.slug !== currentSlug && !a.isDraft && a.status !== 'draft').slice(0, count);
 }

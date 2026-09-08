@@ -5,7 +5,7 @@ import { CATEGORIES } from '../data/categories';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://www.mummabeeblog.com';
-  const rawArticles = getAllArticles().filter((a) => !a.isDraft && a.slug && a.category);
+  const rawArticles = getAllArticles().filter((a) => !a.isDraft && a.status !== 'draft' && a.slug && a.category);
 
   // De-duplicate article URLs by category and slug
   const seenUrls = new Set<string>();
