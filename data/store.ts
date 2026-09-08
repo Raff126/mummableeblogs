@@ -487,22 +487,28 @@ export async function deleteArticle(id: string, slug?: string): Promise<boolean>
 
 export async function saveArticles(articles: Article[]): Promise<boolean> {
   if (typeof window !== 'undefined') {
-    // 1. Ensure all articles have explicit status field matching isDraft
-    const normalizedArticles = articles.map((a) => ({
-      ...a,
-      status: (a.status || (a.isDraft ? 'draft' : 'published')) as 'published' | 'draft',
-      showGoodToKnow: a.showGoodToKnow ?? true,
-      goodToKnowEnabled: a.goodToKnowEnabled ?? true,
-    }));
+    // 1. Strictly synchronize isDraft and status across all articles
+    const normalizedArticles = articles.map((a) => {
+      const isDraft = Boolean(a.isDraft ?? (a.status === 'draft'));
+      return {
+        ...a,
+        isDraft,
+        status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
+        showGoodToKnow: a.showGoodToKnow ?? true,
+        goodToKnowEnabled: a.goodToKnowEnabled ?? true,
+      };
+    });
 
     // 2. Save to localStorage immediately for instant UI feedback
     safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(normalizedArticles));
     window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ARTICLES, data: normalizedArticles } }));
 
-    // 3. Sync to Firestore in background with timeout safety (does not block local saving)
-    saveArticlesToFirestore(normalizedArticles as FirestoreArticle[]).catch((err) => {
+    // 3. Sync to Firestore with await for cross-device consistency
+    try {
+      await saveArticlesToFirestore(normalizedArticles as FirestoreArticle[]);
+    } catch (err) {
       console.warn('Firestore sync background notice (localStorage preserved):', err);
-    });
+    }
 
     // 4. Also sync to local API on dev server for file-based persistence
     const isLocalhost = Boolean(
@@ -522,6 +528,58 @@ export async function saveArticles(articles: Article[]): Promise<boolean> {
       }
     }
   }
+  return true;
+}
+
+/**
+ * Fast direct save for a single article document to Firestore and localStorage.
+ */
+export async function saveOneArticle(article: Article): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const isDraft = Boolean(article.isDraft ?? (article.status === 'draft'));
+  const normalized: Article = {
+    ...article,
+    isDraft,
+    status: isDraft ? 'draft' : 'published',
+    showGoodToKnow: article.showGoodToKnow ?? true,
+    goodToKnowEnabled: article.goodToKnowEnabled ?? true,
+  };
+
+  const current = getInitialArticles();
+  const idx = current.findIndex((a) => a.id === normalized.id || (normalized.slug && a.slug === normalized.slug));
+  let updated: Article[];
+  if (idx !== -1) {
+    updated = current.map((a, i) => (i === idx ? normalized : a));
+  } else {
+    updated = [normalized, ...current];
+  }
+
+  // Update localStorage immediately
+  safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(updated));
+  window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ARTICLES, data: updated } }));
+
+  // Save single document directly to Firestore with await
+  try {
+    await saveOneArticleToFirestore(normalized as FirestoreArticle);
+  } catch (err) {
+    console.warn('Firestore saveOneArticle notice:', err);
+  }
+
+  // Also sync full collection in background
+  saveArticlesToFirestore(updated as FirestoreArticle[]).catch(() => {});
+
+  const isLocalhost = Boolean(
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  );
+  if (isLocalhost) {
+    fetch('/api/articles/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    }).catch(() => {});
+  }
+
   return true;
 }
 
@@ -552,7 +610,7 @@ export async function loadArticlesFromServer(): Promise<Article[]> {
       const fsMap = new Map(firestoreArticles.map((a) => [a.id, a]));
       const fsSlugMap = new Map(firestoreArticles.filter((a) => a.slug).map((a) => [a.slug, a]));
 
-      // Start with Firestore articles
+      // Start with Firestore articles (cloud is authoritative)
       const merged: FirestoreArticle[] = [...firestoreArticles];
 
       // CRITICAL FIX: Preserve any locally created / updated articles that aren't in Firestore yet
@@ -579,11 +637,15 @@ export async function loadArticlesFromServer(): Promise<Article[]> {
         (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))
       );
 
-      // Normalize status property
-      const finalArticles = filtered.map((a) => ({
-        ...a,
-        status: (a.status || (a.isDraft ? 'draft' : 'published')) as 'published' | 'draft',
-      })) as Article[];
+      // Strictly normalize status and isDraft property
+      const finalArticles = filtered.map((a) => {
+        const isDraft = Boolean(a.isDraft ?? (a.status === 'draft'));
+        return {
+          ...a,
+          isDraft,
+          status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
+        };
+      }) as Article[];
 
       // Update localStorage cache
       safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(finalArticles));
@@ -620,10 +682,14 @@ export async function loadArticlesFromServer(): Promise<Article[]> {
         const filtered = merged.filter(
           (a: Article) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))
         );
-        const finalArticles = filtered.map((a: Article) => ({
-          ...a,
-          status: (a.status || (a.isDraft ? 'draft' : 'published')) as 'published' | 'draft',
-        }));
+        const finalArticles = filtered.map((a: Article) => {
+          const isDraft = Boolean(a.isDraft ?? (a.status === 'draft'));
+          return {
+            ...a,
+            isDraft,
+            status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
+          };
+        });
         safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(finalArticles));
         return finalArticles;
       }

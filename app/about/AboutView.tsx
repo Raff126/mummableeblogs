@@ -13,12 +13,19 @@ import {
   STORAGE_KEYS,
   getInitialArticles,
   getDeletedArticleIds,
+  loadArticlesFromServer,
 } from '../../data/store';
 
-export default function AboutView({ topGuides: initialTopGuides }: { topGuides: Article[] }) {
-  const [content, setContent] = useState<AboutPageContent>(DEFAULT_ABOUT);
+interface AboutViewProps {
+  initialContent?: AboutPageContent;
+  initialTopGuides?: Article[];
+  topGuides?: Article[];
+}
+
+export default function AboutView({ initialContent, initialTopGuides, topGuides }: AboutViewProps) {
+  const [content, setContent] = useState<AboutPageContent>(initialContent || DEFAULT_ABOUT);
   const [imgSrc, setImgSrc] = useState<string>('');
-  const [guides, setGuides] = useState<Article[]>(initialTopGuides || []);
+  const [guides, setGuides] = useState<Article[]>(topGuides || initialTopGuides || []);
 
   const loadLatest = () => {
     const localAbout = getInitialAbout();
@@ -28,13 +35,24 @@ export default function AboutView({ topGuides: initialTopGuides }: { topGuides: 
     setImgSrc(resolvedImage);
 
     // Dynamically filter deleted articles and load latest active articles
+    const isPublished = (a: Article) => !a.isDraft && a.status !== 'draft';
     const deleted = getDeletedArticleIds();
     const localArticles = getInitialArticles();
     const all = localArticles.length > 0 ? localArticles : getAllArticles();
     const published = all.filter(
-      (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && !a.isDraft
+      (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && isPublished(a)
     );
     setGuides(published.slice(0, 4));
+
+    loadArticlesFromServer().then((serverArticles) => {
+      if (serverArticles && serverArticles.length > 0) {
+        const curDeleted = getDeletedArticleIds();
+        const serverPublished = serverArticles.filter(
+          (a) => !curDeleted.has(a.id) && (!a.slug || !curDeleted.has(a.slug)) && isPublished(a)
+        );
+        setGuides(serverPublished.slice(0, 4));
+      }
+    }).catch(() => {});
 
     // 1. Query live Firestore first (cross-device cloud sync)
     (async () => {

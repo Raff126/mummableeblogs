@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   getInitialArticles,
   saveArticles,
+  saveOneArticle,
   getInitialMedia,
   saveMedia,
   getDeletedArticleIds,
@@ -220,6 +221,7 @@ export default function AdminNewArticlePage() {
       setGoodToKnowVisibility(newArticle.slug, Boolean(goodToKnowEnabled));
 
       const updated = [newArticle, ...currentArticles.filter(a => a.id !== newArticle.id && a.slug !== newArticle.slug)];
+      await saveOneArticle(newArticle);
       await saveArticles(updated);
 
       // Successfully saved! Immediately clear saving state so buttons update

@@ -86,10 +86,12 @@ export async function fetchArticlesFromFirestore(): Promise<FirestoreArticle[]> 
       const articles: FirestoreArticle[] = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data() as FirestoreArticle;
+        const isDraft = Boolean(data.isDraft ?? (data.status === 'draft'));
         articles.push({
           ...data,
           id: data.id || docSnap.id,
-          status: data.status || (data.isDraft ? 'draft' : 'published'),
+          isDraft,
+          status: isDraft ? 'draft' : 'published',
         });
       });
       return articles;
@@ -112,10 +114,11 @@ export async function saveOneArticleToFirestore(article: FirestoreArticle): Prom
   const saveTask = async (): Promise<boolean> => {
     try {
       const docRef = doc(db, ARTICLES_COLLECTION, article.id);
-      // Clean undefined values & ensure status is set to satisfy security rules
+      const isDraft = Boolean(article.isDraft ?? (article.status === 'draft'));
       const toSave = {
         ...article,
-        status: article.status || (article.isDraft ? 'draft' : 'published'),
+        isDraft,
+        status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
       };
       const cleaned = JSON.parse(JSON.stringify(toSave));
       await setDoc(docRef, cleaned, { merge: true });
@@ -146,9 +149,11 @@ export async function saveArticlesToFirestore(articles: FirestoreArticle[]): Pro
         const chunk = articles.slice(i, i + BATCH_SIZE);
         for (const article of chunk) {
           const docRef = doc(db, ARTICLES_COLLECTION, article.id);
+          const isDraft = Boolean(article.isDraft ?? (article.status === 'draft'));
           const toSave = {
             ...article,
-            status: article.status || (article.isDraft ? 'draft' : 'published'),
+            isDraft,
+            status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
           };
           const cleaned = JSON.parse(JSON.stringify(toSave));
           batch.set(docRef, cleaned, { merge: true });
@@ -243,10 +248,18 @@ export async function seedFirestoreIfEmpty(sourceArticles: FirestoreArticle[]): 
 
   try {
     const existing = await fetchArticlesFromFirestore();
-    if (existing.length > 0) return; // Already seeded
+    const existingIds = new Set(existing.map((a) => a.id));
+    const existingSlugs = new Set(existing.filter((a) => a.slug).map((a) => a.slug));
 
-    console.log('[Firestore] Seeding', sourceArticles.length, 'articles...');
-    await saveArticlesToFirestore(sourceArticles);
+    // Find any source articles that are NOT yet in Firestore
+    const missing = sourceArticles.filter(
+      (a) => !existingIds.has(a.id) && (!a.slug || !existingSlugs.has(a.slug))
+    );
+
+    if (missing.length === 0) return; // All already present
+
+    console.log('[Firestore] Seeding', missing.length, 'missing articles...');
+    await saveArticlesToFirestore(missing);
     console.log('[Firestore] Seed complete.');
   } catch (err) {
     console.error('Error seeding Firestore:', err);

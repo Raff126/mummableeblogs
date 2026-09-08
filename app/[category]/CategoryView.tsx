@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CATEGORIES, CategoryInfo } from '../../data/categories';
 import { ArticleItem, getAllArticles } from '../../data/articles';
-import { getInitialArticles, getInitialCategories, getDeletedArticleIds } from '../../data/store';
+import { getInitialArticles, getInitialCategories, getDeletedArticleIds, loadArticlesFromServer } from '../../data/store';
 import GuideCard from '../../components/GuideCard';
 import DiscountCodesSection from '../../components/DiscountCodesSection';
 import NewsletterBand from '../../components/NewsletterBand';
@@ -31,11 +31,16 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
   );
 
   const [articles, setArticles] = useState<ArticleItem[]>([]);
+  const [activeSubcategory, setActiveSubcategory] = useState<string>('All Guides');
+  const [sortBy, setSortBy] = useState<string>('newest');
+  const [filterAge, setFilterAge] = useState<string>('all');
+  const [filterIndoorOutdoor, setFilterIndoorOutdoor] = useState<string>('all');
+  const [filterBudget, setFilterBudget] = useState<string>('all');
   const [visibleCount, setVisibleCount] = useState<number>(4);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [mounted, setMounted] = useState<boolean>(false);
 
-  const refreshCategoryArticles = () => {
+  const refreshCategoryArticles = async () => {
     const cats = getInitialCategories();
     if (cats[categorySlug]) {
       setCategoryInfo(cats[categorySlug]);
@@ -46,7 +51,9 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
     const all = local.length > 0 ? local : getAllArticles();
     const expatSlugs = ['the-expat-edit', 'expat-edit'];
     const matchCat = (artCat: string) => expatSlugs.includes(categorySlug) ? expatSlugs.includes(artCat) : artCat === categorySlug;
-    const filtered = all.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && matchCat(a.category) && !a.isDraft);
+    const isPublished = (a: ArticleItem) => !a.isDraft && a.status !== 'draft';
+
+    const filtered = all.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && matchCat(a.category) && isPublished(a));
 
     const sorted = [...filtered].sort((a, b) => {
       const timeA = new Date(a.publishedAt).getTime() || 0;
@@ -58,45 +65,26 @@ export default function CategoryView({ categorySlug }: CategoryViewProps) {
     setArticles(sorted);
     setIsLoading(false);
 
-    const endpoint = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? `/api/articles?t=${Date.now()}`
-      : `/data/articles.json?t=${Date.now()}`;
-
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => res.ok ? res.json() : null)
-      .then((apiArticles: ArticleItem[]) => {
-        if (Array.isArray(apiArticles)) {
-          const currentDeleted = getDeletedArticleIds();
-          const currentLocal = getInitialArticles();
-          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
-          
-          const merged = [...currentLocal];
-          for (const sArt of apiArticles) {
-            if (currentDeleted.has(sArt.id) || (sArt.slug && currentDeleted.has(sArt.slug))) {
-              continue;
-            }
-            if (!localMap.has(sArt.id)) {
-              merged.push(sArt);
-              localMap.set(sArt.id, sArt);
-            }
-          }
-
-          const apiFiltered = merged.filter((a) => 
-            !currentDeleted.has(a.id) && 
-            (!a.slug || !currentDeleted.has(a.slug)) && 
-            matchCat(a.category) && 
-            !a.isDraft
-          );
-          const apiSorted = [...apiFiltered].sort((a, b) => {
-            const timeA = new Date(a.publishedAt).getTime() || 0;
-            const timeB = new Date(b.publishedAt).getTime() || 0;
-            if (timeB !== timeA) return timeB - timeA;
-            return b.id.localeCompare(a.id);
-          });
-          setArticles(apiSorted);
-        }
-      })
-      .catch(() => {});
+    // Fetch authoritative server/Firestore articles
+    try {
+      const serverArticles = await loadArticlesFromServer();
+      if (Array.isArray(serverArticles) && serverArticles.length > 0) {
+        const currentDeleted = getDeletedArticleIds();
+        const apiFiltered = serverArticles.filter((a) => 
+          !currentDeleted.has(a.id) && 
+          (!a.slug || !currentDeleted.has(a.slug)) && 
+          matchCat(a.category) && 
+          isPublished(a)
+        );
+        const apiSorted = [...apiFiltered].sort((a, b) => {
+          const timeA = new Date(a.publishedAt).getTime() || 0;
+          const timeB = new Date(b.publishedAt).getTime() || 0;
+          if (timeB !== timeA) return timeB - timeA;
+          return b.id.localeCompare(a.id);
+        });
+        setArticles(apiSorted);
+      }
+    } catch (_) {}
   };
 
   useEffect(() => {

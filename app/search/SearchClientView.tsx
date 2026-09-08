@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArticleItem, getAllArticles } from '../../data/articles';
 import { CATEGORIES } from '../../data/categories';
-import { getInitialArticles, getDeletedArticleIds } from '../../data/store';
+import { getInitialArticles, getDeletedArticleIds, loadArticlesFromServer } from '../../data/store';
 import GuideCard from '../../components/GuideCard';
 import NewsletterBand from '../../components/NewsletterBand';
 
@@ -13,11 +13,9 @@ const POPULAR_SEARCHES = [
   'Dubai indoor play',
   'Family brunch',
   'Abu Dhabi staycation',
-  'Outdoor parks',
-  'Toddler activities',
-  'School holidays',
-  'Budget friendly',
-  'Packing list',
+  'Free parks Dubai',
+  'Water play areas',
+  'Yas Island with kids',
 ];
 
 const LOCATIONS = [
@@ -69,34 +67,18 @@ export default function SearchClientView() {
 
   // Load articles from localStorage and API
   useEffect(() => {
+    const isPublished = (a: ArticleItem) => !a.isDraft && a.status !== 'draft';
     const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
     const all = local.length > 0 ? local : getAllArticles();
-    setArticles(all.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && !a.isDraft));
+    setArticles(all.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && isPublished(a)));
     setIsLoading(false);
 
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => res.ok ? res.json() : null)
-      .then((apiArticles: ArticleItem[]) => {
-        if (Array.isArray(apiArticles) && apiArticles.length > 0) {
+    loadArticlesFromServer()
+      .then((serverArticles) => {
+        if (Array.isArray(serverArticles) && serverArticles.length > 0) {
           const currentDeleted = getDeletedArticleIds();
-          const currentLocal = getInitialArticles();
-          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
-
-          const merged = [...currentLocal];
-          for (const sArt of apiArticles) {
-            if (currentDeleted.has(sArt.id) || (sArt.slug && currentDeleted.has(sArt.slug))) {
-              continue;
-            }
-            if (!localMap.has(sArt.id)) {
-              merged.push(sArt);
-              localMap.set(sArt.id, sArt);
-            }
-          }
-
-          setArticles(merged.filter((a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && !a.isDraft));
+          setArticles(serverArticles.filter((a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && isPublished(a)));
         }
       })
       .catch((err) => console.error('Error loading search articles:', err));

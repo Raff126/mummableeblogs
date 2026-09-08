@@ -11,10 +11,11 @@ export default function RecentBlogsSection() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshArticles = async () => {
+    const isPublished = (a: ArticleItem) => !a.isDraft && a.status !== 'draft';
     const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
     const published = (local.length > 0 ? local : getAllArticles()).filter(
-      (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && !a.isDraft
+      (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && isPublished(a)
     );
 
     const sorted = [...published].sort((a, b) => {
@@ -33,7 +34,7 @@ export default function RecentBlogsSection() {
       if (serverArticles.length > 0) {
         const currentDeleted = getDeletedArticleIds();
         const apiPublished = serverArticles.filter(
-          (a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && !a.isDraft
+          (a) => !currentDeleted.has(a.id) && (!a.slug || !currentDeleted.has(a.slug)) && isPublished(a)
         );
         const apiSorted = [...apiPublished].sort((a, b) => {
           const timeA = new Date(a.publishedAt).getTime() || 0;

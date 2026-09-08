@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   getInitialArticles,
   saveArticles,
+  saveOneArticle,
   getInitialMedia,
   saveMedia,
   getDeletedArticleIds,
@@ -262,7 +263,8 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
         setGoodToKnowVisibility(slug.trim(), Boolean(goodToKnowEnabled));
       }
 
-      // 2. Save updated articles list
+      // 2. Save updated article directly to Firestore and localStorage
+      await saveOneArticle(updatedArticle);
       await saveArticles(updated);
 
       // Successfully saved! Reset saving state so buttons update immediately

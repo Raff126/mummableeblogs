@@ -21,6 +21,8 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
   const [article, setArticle] = useState<ArticleItem | null>(isFallback ? null : (initialArticle || null));
   const [relatedArticles, setRelatedArticles] = useState<ArticleItem[]>([]);
   const [isLoading, setIsLoading] = useState(isFallback || !initialArticle);
+  const [isDraftLocked, setIsDraftLocked] = useState<boolean>(false);
+  const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
 
   // For fallback pages served by Firebase rewrites, extract the real slug from the URL
   const getEffectiveSlug = (): string => {
@@ -39,6 +41,21 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       if (parts.length >= 1) return parts[0];
     }
     return categorySlug;
+  };
+
+  // Check if current user is admin or viewing through an authorized preview link
+  const checkIsAdminOrPreview = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('preview') === 'true' || urlParams.get('preview') === 'draft') return true;
+    try {
+      const auth = localStorage.getItem('mummabee_auth');
+      if (auth) {
+        const parsed = JSON.parse(auth);
+        if (parsed && (parsed.authenticated || parsed.isAdmin || parsed.email)) return true;
+      }
+    } catch (_) {}
+    return false;
   };
 
   const refreshArticle = async () => {
@@ -78,76 +95,58 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       );
     };
 
-    // 1. Check local store FIRST (user edits / drafts in localStorage take precedence over static build)
+    // 1. Candidate from local or static build
     const localArticles = getInitialArticles();
-    const foundInLocal = findArticle(localArticles);
+    let candidate = findArticle(localArticles) || (!isFallback && initialArticle ? initialArticle : null) || findArticle(getAllArticles());
 
-    if (foundInLocal) {
-      setArticle(foundInLocal);
-      if (typeof document !== 'undefined' && foundInLocal.title) {
-        document.title = `${foundInLocal.title} | MummaBeeBlog`;
-      }
-      const all = localArticles.length > 0 ? localArticles : getAllArticles();
-      const related = all
-        .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === foundInLocal.category && a.slug !== foundInLocal.slug && !a.isDraft)
-        .slice(0, 4);
-      setRelatedArticles(related);
-      setIsLoading(false);
-      return;
-    }
-
-    // 2. Check initialArticle if already matching and not deleted
-    if (!isFallback && initialArticle && !deleted.has(initialArticle.id) && (!initialArticle.slug || !deleted.has(initialArticle.slug)) && (
-      initialArticle.slug?.toLowerCase().trim().replace(/\/$/, '') === normalizedSlug ||
-      initialArticle.id?.toLowerCase().trim() === normalizedSlug
-    )) {
-      setArticle(initialArticle);
-      if (typeof document !== 'undefined' && initialArticle.title) {
-        document.title = `${initialArticle.title} | MummaBeeBlog`;
-      }
-      const all = getAllArticles();
-      const related = all
-        .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === initialArticle.category && a.slug !== initialArticle.slug && !a.isDraft)
-        .slice(0, 4);
-      setRelatedArticles(related);
-      setIsLoading(false);
-      return;
-    }
-
-    // 3. Fall back to static articles
-    const foundInStatic = findArticle(getAllArticles());
-    if (foundInStatic) {
-      setArticle(foundInStatic);
-      const all = getAllArticles();
-      const related = all
-        .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === foundInStatic.category && a.slug !== foundInStatic.slug && !a.isDraft)
-        .slice(0, 4);
-      setRelatedArticles(related);
-      setIsLoading(false);
-      return;
-    }
-
-    // 4. Try fetching from Firestore / server
+    // 2. Fetch authoritative cloud/Firestore state immediately
     try {
       const serverArticles = await loadArticlesFromServer();
       if (serverArticles.length > 0) {
-        const validData = serverArticles.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)));
-        const apiFound = findArticle(validData);
-        if (apiFound) {
-          setArticle(apiFound);
-          const related = validData
-            .filter((a) => a.category === apiFound.category && a.slug !== apiFound.slug && !a.isDraft)
-            .slice(0, 4);
-          setRelatedArticles(related);
-        } else {
-          setArticle(null);
+        const validServer = serverArticles.filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)));
+        const serverFound = findArticle(validServer);
+        if (serverFound) {
+          candidate = serverFound;
         }
       }
     } catch (err) {
       console.error('Error fetching article from server:', err);
-    } finally {
-      setIsLoading(false);
     }
+
+    if (!candidate) {
+      setArticle(null);
+      setRelatedArticles([]);
+      setIsLoading(false);
+      return;
+    }
+
+    // 3. Enforce draft protection
+    const isDraft = Boolean(candidate.isDraft || candidate.status === 'draft');
+    const isAdminOrPreview = checkIsAdminOrPreview();
+
+    if (isDraft && !isAdminOrPreview) {
+      setIsDraftLocked(true);
+      setArticle(candidate);
+      setIsPreviewMode(false);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsDraftLocked(false);
+    setIsPreviewMode(isDraft && isAdminOrPreview);
+    setArticle(candidate);
+
+    if (typeof document !== 'undefined' && candidate.title) {
+      document.title = `${candidate.title} | MummaBeeBlog`;
+    }
+
+    // 4. Load related articles (strictly published only)
+    const all = localArticles.length > 0 ? localArticles : getAllArticles();
+    const related = all
+      .filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug)) && a.category === candidate.category && a.slug !== candidate.slug && !a.isDraft && a.status !== 'draft')
+      .slice(0, 4);
+    setRelatedArticles(related);
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -174,6 +173,34 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center space-y-3 max-w-sm">
           <span className="text-3xl animate-pulse">🐝</span>
           <p className="font-serif text-lg font-bold text-[#683846]">Loading UAE Guide...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isDraftLocked) {
+    return (
+      <div className="min-h-screen bg-[#F8EDEF] py-20 px-4 flex items-center justify-center">
+        <div className="bg-white p-8 sm:p-12 rounded-3xl shadow-sm border border-gray-100 text-center space-y-5 max-w-lg">
+          <span className="text-4xl">🔒</span>
+          <h1 className="font-serif text-3xl font-bold text-[#683846]">This Guide is Currently Unpublished</h1>
+          <p className="text-sm text-[#332D2F]/80 leading-relaxed">
+            This article is currently saved as an unpublished draft. Explore our tested family guides across the UAE below.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              href={`/${categorySlug || 'uae-with-kids'}`}
+              className="px-6 py-3 rounded-full bg-[#683846] text-white font-bold text-xs hover:bg-[#332D2F] transition-colors shadow-2xs"
+            >
+              Explore {categorySlug ? categorySlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Guides'} →
+            </Link>
+            <Link
+              href="/"
+              className="px-6 py-3 rounded-full bg-[#F8EDEF] text-[#683846] font-bold text-xs hover:bg-[#B75B70] hover:text-white transition-colors border border-[#B75B70]/30"
+            >
+              Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -269,6 +296,16 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />
+
+      {/* Preview Mode Alert Banner */}
+      {isPreviewMode && (
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-xs font-semibold py-2.5 px-4 text-center flex items-center justify-center gap-2">
+          <span>🔒 <strong>Unpublished Draft (Preview Mode):</strong> This article is unpublished and only visible to you.</span>
+          <Link href={`/admin/articles/${article.id}`} className="underline text-amber-950 font-bold ml-1 hover:text-black">
+            Edit in Admin
+          </Link>
+        </div>
+      )}
 
       {/* Outer Atmosphere Canvas: Desert Blush */}
       <div className="bg-[#F8EDEF] min-h-screen py-5 sm:py-12 px-3 sm:px-6 lg:px-8 overflow-x-hidden">

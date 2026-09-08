@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   getInitialArticles,
   saveArticles,
+  saveOneArticle,
   deleteArticle,
   getDeletedArticleIds,
   setGoodToKnowVisibility,
@@ -38,8 +39,8 @@ export default function AdminArticlesPage() {
       if (serverArticles.length > 0) {
         setArticles(serverArticles);
 
-        // Seed Firestore if it's empty (first-time setup)
-        if (local.length > 0 && serverArticles.length === local.length) {
+        // Seed Firestore if missing any static articles
+        if (local.length > 0) {
           seedFirestoreIfEmpty(local as FirestoreArticle[]).catch(() => {});
         }
       }
@@ -68,14 +69,26 @@ export default function AdminArticlesPage() {
   }, []);
 
   const handleTogglePublish = async (id: string) => {
+    let toggledArticle: Article | null = null;
     const updated = articles.map((a) => {
       if (a.id === id) {
-        return { ...a, isDraft: !a.isDraft };
+        const nextDraft = !a.isDraft;
+        const modified: Article = {
+          ...a,
+          isDraft: nextDraft,
+          status: nextDraft ? 'draft' : 'published',
+        };
+        toggledArticle = modified;
+        return modified;
       }
       return a;
     });
     setArticles(updated);
-    await saveArticles(updated);
+    if (toggledArticle) {
+      await saveOneArticle(toggledArticle);
+    } else {
+      await saveArticles(updated);
+    }
     setMessage('Article status updated successfully.');
     setTimeout(() => setMessage(''), 3000);
   };

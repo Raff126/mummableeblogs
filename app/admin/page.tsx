@@ -5,8 +5,10 @@ import Link from 'next/link';
 import {
   getInitialArticles,
   saveArticles,
+  saveOneArticle,
   deleteArticle,
   getDeletedArticleIds,
+  loadArticlesFromServer,
   Article,
 } from '../../data/store';
 import { CATEGORIES } from '../../data/categories';
@@ -16,37 +18,17 @@ export default function AdminDashboardPage() {
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
 
-  const loadArticles = () => {
+  const loadArticles = async () => {
     const local = getInitialArticles();
     setArticles(local);
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/articles/?t=${Date.now()}` : `/data/articles.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => res.ok ? res.json() : null)
-      .then((data: Article[]) => {
-        if (Array.isArray(data)) {
-          const deleted = getDeletedArticleIds();
-          const currentLocal = getInitialArticles();
-          const localMap = new Map(currentLocal.map((a) => [a.id, a]));
-
-          const merged = [...currentLocal];
-          for (const sArt of data) {
-            if (deleted.has(sArt.id) || (sArt.slug && deleted.has(sArt.slug))) {
-              continue;
-            }
-            if (!localMap.has(sArt.id)) {
-              merged.push(sArt);
-              localMap.set(sArt.id, sArt);
-            }
-          }
-
-          const filtered = merged.filter(
-            (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))
-          );
-          setArticles(filtered);
-        }
-      })
-      .catch(() => {});
+    try {
+      const serverArticles = await loadArticlesFromServer();
+      if (serverArticles && serverArticles.length > 0) {
+        setArticles(serverArticles);
+      }
+    } catch (err) {
+      console.warn('Dashboard failed to load server articles:', err);
+    }
   };
 
   useEffect(() => {
@@ -62,15 +44,27 @@ export default function AdminDashboardPage() {
     };
   }, []);
 
-  const handleTogglePublish = (id: string) => {
+  const handleTogglePublish = async (id: string) => {
+    let toggledArticle: Article | null = null;
     const updated = articles.map((a) => {
       if (a.id === id) {
-        return { ...a, isDraft: !a.isDraft };
+        const nextDraft = !a.isDraft;
+        const modified: Article = {
+          ...a,
+          isDraft: nextDraft,
+          status: nextDraft ? 'draft' : 'published',
+        };
+        toggledArticle = modified;
+        return modified;
       }
       return a;
     });
     setArticles(updated);
-    saveArticles(updated);
+    if (toggledArticle) {
+      await saveOneArticle(toggledArticle);
+    } else {
+      await saveArticles(updated);
+    }
     setMessage('Article status updated successfully.');
     setTimeout(() => setMessage(''), 3000);
   };
