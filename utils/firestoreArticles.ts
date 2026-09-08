@@ -53,78 +53,116 @@ export interface FirestoreArticle {
   seoTitle?: string;
   seoDescription?: string;
   isDraft?: boolean;
+  status?: 'published' | 'draft';
   goodToKnowEnabled?: boolean;
   showGoodToKnow?: boolean;
 }
 
+/** Helper to ensure Firestore async operations never hang indefinitely */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: any;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timer = setTimeout(() => {
+      resolve(fallback);
+    }, ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 /**
- * Fetch all articles from Firestore.
- * Returns [] if Firestore unavailable (e.g. SSR).
+ * Fetch all articles from Firestore with safety timeout.
+ * Returns [] if Firestore unavailable (e.g. SSR or network issue).
  */
 export async function fetchArticlesFromFirestore(): Promise<FirestoreArticle[]> {
   const db = getFirebaseDb();
   if (!db) return [];
 
-  try {
-    const q = query(collection(db, ARTICLES_COLLECTION));
-    const snapshot = await getDocs(q);
-    const articles: FirestoreArticle[] = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data() as FirestoreArticle;
-      articles.push({ ...data, id: data.id || docSnap.id });
-    });
-    return articles;
-  } catch (err) {
-    console.error('Error fetching articles from Firestore:', err);
-    return [];
-  }
+  const fetchTask = async (): Promise<FirestoreArticle[]> => {
+    try {
+      const q = query(collection(db, ARTICLES_COLLECTION));
+      const snapshot = await getDocs(q);
+      const articles: FirestoreArticle[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data() as FirestoreArticle;
+        articles.push({
+          ...data,
+          id: data.id || docSnap.id,
+          status: data.status || (data.isDraft ? 'draft' : 'published'),
+        });
+      });
+      return articles;
+    } catch (err) {
+      console.warn('Error fetching articles from Firestore:', err);
+      return [];
+    }
+  };
+
+  return withTimeout(fetchTask(), 4000, []);
 }
 
 /**
- * Save a single article to Firestore (upsert by id).
+ * Save a single article to Firestore (upsert by id) with safety timeout.
  */
 export async function saveOneArticleToFirestore(article: FirestoreArticle): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
 
-  try {
-    const docRef = doc(db, ARTICLES_COLLECTION, article.id);
-    // Clean undefined values — Firestore doesn't accept undefined
-    const cleaned = JSON.parse(JSON.stringify(article));
-    await setDoc(docRef, cleaned, { merge: true });
-    return true;
-  } catch (err) {
-    console.error('Error saving article to Firestore:', err);
-    return false;
-  }
+  const saveTask = async (): Promise<boolean> => {
+    try {
+      const docRef = doc(db, ARTICLES_COLLECTION, article.id);
+      // Clean undefined values & ensure status is set to satisfy security rules
+      const toSave = {
+        ...article,
+        status: article.status || (article.isDraft ? 'draft' : 'published'),
+      };
+      const cleaned = JSON.parse(JSON.stringify(toSave));
+      await setDoc(docRef, cleaned, { merge: true });
+      return true;
+    } catch (err) {
+      console.warn('Error saving article to Firestore:', err);
+      return false;
+    }
+  };
+
+  return withTimeout(saveTask(), 4000, false);
 }
 
 /**
- * Batch-save all articles to Firestore.
+ * Batch-save all articles to Firestore with safety timeout.
  * Used for full sync operations.
  */
 export async function saveArticlesToFirestore(articles: FirestoreArticle[]): Promise<boolean> {
   const db = getFirebaseDb();
-  if (!db) return false;
+  if (!db || articles.length === 0) return false;
 
-  try {
-    // Firestore batches are limited to 500 ops. Split if needed.
-    const BATCH_SIZE = 450;
-    for (let i = 0; i < articles.length; i += BATCH_SIZE) {
-      const batch = writeBatch(db);
-      const chunk = articles.slice(i, i + BATCH_SIZE);
-      for (const article of chunk) {
-        const docRef = doc(db, ARTICLES_COLLECTION, article.id);
-        const cleaned = JSON.parse(JSON.stringify(article));
-        batch.set(docRef, cleaned, { merge: true });
+  const batchTask = async (): Promise<boolean> => {
+    try {
+      // Firestore batches are limited to 500 ops. Split if needed.
+      const BATCH_SIZE = 450;
+      for (let i = 0; i < articles.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        const chunk = articles.slice(i, i + BATCH_SIZE);
+        for (const article of chunk) {
+          const docRef = doc(db, ARTICLES_COLLECTION, article.id);
+          const toSave = {
+            ...article,
+            status: article.status || (article.isDraft ? 'draft' : 'published'),
+          };
+          const cleaned = JSON.parse(JSON.stringify(toSave));
+          batch.set(docRef, cleaned, { merge: true });
+        }
+        await batch.commit();
       }
-      await batch.commit();
+      return true;
+    } catch (err) {
+      console.warn('Error batch-saving articles to Firestore:', err);
+      return false;
     }
-    return true;
-  } catch (err) {
-    console.error('Error batch-saving articles to Firestore:', err);
-    return false;
-  }
+  };
+
+  return withTimeout(batchTask(), 5000, false);
 }
 
 /**
@@ -135,55 +173,63 @@ export async function deleteArticleFromFirestore(id: string, slug?: string): Pro
   const db = getFirebaseDb();
   if (!db) return false;
 
-  try {
-    const batch = writeBatch(db);
+  const deleteTask = async (): Promise<boolean> => {
+    try {
+      const batch = writeBatch(db);
 
-    // Delete the article document
-    batch.delete(doc(db, ARTICLES_COLLECTION, id));
+      // Delete the article document
+      batch.delete(doc(db, ARTICLES_COLLECTION, id));
 
-    // Record deletion so it doesn't come back from static JSON
-    batch.set(doc(db, DELETED_COLLECTION, id), {
-      id,
-      slug: slug || '',
-      deletedAt: new Date().toISOString(),
-    });
-    if (slug) {
-      batch.set(doc(db, DELETED_COLLECTION, slug), {
+      // Record deletion so it doesn't come back from static JSON
+      batch.set(doc(db, DELETED_COLLECTION, id), {
         id,
-        slug,
+        slug: slug || '',
         deletedAt: new Date().toISOString(),
       });
-    }
+      if (slug) {
+        batch.set(doc(db, DELETED_COLLECTION, slug), {
+          id,
+          slug,
+          deletedAt: new Date().toISOString(),
+        });
+      }
 
-    await batch.commit();
-    return true;
-  } catch (err) {
-    console.error('Error deleting article from Firestore:', err);
-    return false;
-  }
+      await batch.commit();
+      return true;
+    } catch (err) {
+      console.warn('Error deleting article from Firestore:', err);
+      return false;
+    }
+  };
+
+  return withTimeout(deleteTask(), 4000, false);
 }
 
 /**
- * Fetch list of deleted article IDs from Firestore.
+ * Fetch list of deleted article IDs from Firestore with safety timeout.
  */
 export async function fetchDeletedIdsFromFirestore(): Promise<Set<string>> {
   const db = getFirebaseDb();
   if (!db) return new Set();
 
-  try {
-    const snapshot = await getDocs(collection(db, DELETED_COLLECTION));
-    const ids = new Set<string>();
-    snapshot.forEach((docSnap) => {
-      ids.add(docSnap.id);
-      const data = docSnap.data();
-      if (data.id) ids.add(data.id);
-      if (data.slug) ids.add(data.slug);
-    });
-    return ids;
-  } catch (err) {
-    console.error('Error fetching deleted IDs from Firestore:', err);
-    return new Set();
-  }
+  const fetchDeletedTask = async (): Promise<Set<string>> => {
+    try {
+      const snapshot = await getDocs(collection(db, DELETED_COLLECTION));
+      const ids = new Set<string>();
+      snapshot.forEach((docSnap) => {
+        ids.add(docSnap.id);
+        const data = docSnap.data();
+        if (data.id) ids.add(data.id);
+        if (data.slug) ids.add(data.slug);
+      });
+      return ids;
+    } catch (err) {
+      console.warn('Error fetching deleted IDs from Firestore:', err);
+      return new Set();
+    }
+  };
+
+  return withTimeout(fetchDeletedTask(), 4000, new Set());
 }
 
 /**

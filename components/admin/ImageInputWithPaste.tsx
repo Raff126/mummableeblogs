@@ -89,10 +89,27 @@ export default function ImageInputWithPaste({
     return typeof dataUrlOrFile === 'string' ? dataUrlOrFile : '';
   };
 
+  const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+
   const processImageFile = async (fileOrDataUrl: File | string, filenameHint?: string) => {
-    setIsUploading(true);
     setError('');
     setFeedback('');
+
+    // 0. Validate file size FIRST before compressing or processing
+    if (typeof fileOrDataUrl !== 'string') {
+      if (fileOrDataUrl.size > MAX_IMAGE_SIZE_BYTES) {
+        setError('Image is too large. Maximum allowed file size is 2 MB.');
+        return;
+      }
+    } else if (fileOrDataUrl.startsWith('data:image/')) {
+      const approxBytes = Math.round((fileOrDataUrl.length * 3) / 4);
+      if (approxBytes > MAX_IMAGE_SIZE_BYTES) {
+        setError('Image is too large. Maximum allowed file size is 2 MB.');
+        return;
+      }
+    }
+
+    setIsUploading(true);
 
     try {
       // 1. Optimize & resize client-side
@@ -144,6 +161,10 @@ export default function ImageInputWithPaste({
           e.preventDefault();
           const blob = item.getAsFile();
           if (blob) {
+            if (blob.size > MAX_IMAGE_SIZE_BYTES) {
+              setError('Image is too large. Maximum allowed file size is 2 MB.');
+              return;
+            }
             await processImageFile(blob, `pasted-${Date.now()}.jpg`);
             return;
           }
@@ -154,6 +175,12 @@ export default function ImageInputWithPaste({
     // If text was pasted, check if it's a base64 data URL
     const pastedText = e.clipboardData?.getData('text');
     if (pastedText && pastedText.startsWith('data:image/') && pastedText.length > 500) {
+      const approxBytes = Math.round((pastedText.length * 3) / 4);
+      if (approxBytes > MAX_IMAGE_SIZE_BYTES) {
+        e.preventDefault();
+        setError('Image is too large. Maximum allowed file size is 2 MB.');
+        return;
+      }
       e.preventDefault();
       await processImageFile(pastedText, `pasted-dataurl-${Date.now()}.jpg`);
     }
@@ -165,7 +192,12 @@ export default function ImageInputWithPaste({
     setDragOver(false);
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
-      await processImageFile(files[0]);
+      const file = files[0];
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        setError('Image is too large. Maximum allowed file size is 2 MB.');
+        return;
+      }
+      await processImageFile(file);
     }
   };
 
@@ -173,6 +205,13 @@ export default function ImageInputWithPaste({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        setError('Image is too large. Maximum allowed file size is 2 MB.');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
       await processImageFile(file, file.name);
     }
     if (fileInputRef.current) {

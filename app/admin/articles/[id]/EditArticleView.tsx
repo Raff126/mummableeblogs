@@ -56,6 +56,8 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState<'draft' | 'publish' | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -109,6 +111,13 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
 
     if (!file.type.startsWith('image/')) {
       setError('Please select a valid image file (JPG, PNG, or WEBP).');
+      return;
+    }
+
+    const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setError('Image is too large. Maximum allowed file size is 2 MB.');
+      if (e.target) e.target.value = '';
       return;
     }
 
@@ -186,13 +195,20 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
     }
 
     setIsSaving(true);
+    setSavingAction(draftStatus ? 'draft' : 'publish');
     setError('');
 
     try {
       let allArticles = getInitialArticles();
-      // Fetch latest from Firestore/server for accurate merge
+      // Fetch latest from Firestore/server with 2s timeout guard
       try {
-        allArticles = await loadArticlesFromServer();
+        const serverArt = await Promise.race([
+          loadArticlesFromServer(),
+          new Promise<ArticleItem[]>((res) => setTimeout(() => res(allArticles), 2000)),
+        ]);
+        if (serverArt && serverArt.length > 0) {
+          allArticles = serverArt;
+        }
       } catch (fetchErr) {
         // Fallback to local articles
       }
@@ -229,6 +245,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
         location: factLocation.trim(),
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
         isDraft: draftStatus,
+        status: draftStatus ? 'draft' : 'published',
         goodToKnowEnabled: Boolean(goodToKnowEnabled),
         showGoodToKnow: Boolean(goodToKnowEnabled),
       };
@@ -247,14 +264,29 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
 
       // 2. Save updated articles list
       await saveArticles(updated);
-      setMessage('Article updated successfully! Live on website.');
+
+      // Successfully saved! Reset saving state so buttons update immediately
+      setIsSaving(false);
+      setSavingAction(null);
+      setIsSaved(true);
+      setMessage(draftStatus ? '✨ Draft saved successfully! Redirecting...' : '🎉 Article updated & published live! Redirecting...');
+
       setTimeout(() => {
         router.push('/admin/articles');
-      }, 1000);
+      }, 900);
+
+      // Fallback navigation in case client router push is delayed
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/admin/articles/')) {
+          window.location.href = '/admin/articles';
+        }
+      }, 1600);
     } catch (saveErr) {
       console.error('Failed to save article:', saveErr);
       setError('An error occurred while saving. Please try again.');
       setIsSaving(false);
+      setSavingAction(null);
+      setIsSaved(false);
     }
   };
 
@@ -271,17 +303,25 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
         <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => handleSave(true)}
-            disabled={isSaving}
-            className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50"
+            disabled={isSaving || isSaved}
+            className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50 transition-all"
           >
-            {isSaving ? 'Saving...' : 'Save Draft'}
+            {savingAction === 'draft'
+              ? 'Saving Draft...'
+              : isSaved
+              ? 'Draft Saved! ✓'
+              : 'Save Draft'}
           </button>
           <button
             onClick={() => handleSave(false)}
-            disabled={isSaving}
-            className="flex-1 sm:flex-none btn-primary disabled:opacity-50"
+            disabled={isSaving || isSaved}
+            className="flex-1 sm:flex-none btn-primary disabled:opacity-50 transition-all"
           >
-            {isSaving ? 'Updating...' : 'Update & Publish'}
+            {savingAction === 'publish'
+              ? 'Updating...'
+              : isSaved
+              ? 'Updated & Published! ✓ 🚀'
+              : 'Update & Publish'}
           </button>
         </div>
       </div>

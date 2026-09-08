@@ -40,6 +40,7 @@ export interface ArticleItem {
   seoTitle?: string;
   seoDescription?: string;
   isDraft?: boolean;
+  status?: 'published' | 'draft';
   goodToKnowEnabled?: boolean;
   showGoodToKnow?: boolean;
 }

@@ -51,6 +51,8 @@ export default function AdminNewArticlePage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState<'draft' | 'publish' | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -66,6 +68,13 @@ export default function AdminNewArticlePage() {
 
     if (!file.type.startsWith('image/')) {
       setError('Please select a valid image file (JPG, PNG, or WEBP).');
+      return;
+    }
+
+    const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setError('Image is too large. Maximum allowed file size is 2 MB.');
+      if (e.target) e.target.value = '';
       return;
     }
 
@@ -145,13 +154,20 @@ export default function AdminNewArticlePage() {
     }
 
     setIsSaving(true);
+    setSavingAction(isDraft ? 'draft' : 'publish');
     setError('');
 
     try {
-      // Fetch latest articles from Firestore/server
+      // Fetch latest articles from Firestore/server with 2s timeout guard
       let currentArticles = getInitialArticles();
       try {
-        currentArticles = await loadArticlesFromServer();
+        const serverArt = await Promise.race([
+          loadArticlesFromServer(),
+          new Promise<Article[]>((res) => setTimeout(() => res(currentArticles), 2000)),
+        ]);
+        if (serverArt && serverArt.length > 0) {
+          currentArticles = serverArt;
+        }
       } catch (fetchErr) {
         // Fallback to local articles
       }
@@ -185,6 +201,7 @@ export default function AdminNewArticlePage() {
         imageCaption: imageCaption.trim(),
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
         isDraft,
+        status: isDraft ? 'draft' : 'published',
         answerSummary: (answerSummary || finalExcerpt).trim(),
         goodToKnowEnabled: Boolean(goodToKnowEnabled),
         showGoodToKnow: Boolean(goodToKnowEnabled),
@@ -205,14 +222,28 @@ export default function AdminNewArticlePage() {
       const updated = [newArticle, ...currentArticles.filter(a => a.id !== newArticle.id && a.slug !== newArticle.slug)];
       await saveArticles(updated);
 
-      setMessage(isDraft ? '✨ Draft saved successfully!' : '🎉 Post published live to the website!');
+      // Successfully saved! Immediately clear saving state so buttons update
+      setIsSaving(false);
+      setSavingAction(null);
+      setIsSaved(true);
+      setMessage(isDraft ? '✨ Draft saved successfully! Redirecting to articles...' : '🎉 Post published live to the website! Redirecting to articles...');
+
       setTimeout(() => {
         router.push('/admin/articles');
-      }, 1000);
+      }, 900);
+
+      // Fallback navigation in case client router push is delayed
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/new')) {
+          window.location.href = '/admin/articles';
+        }
+      }, 1600);
     } catch (saveErr) {
       console.error('Error publishing post:', saveErr);
       setError('An error occurred while publishing. Please try again.');
       setIsSaving(false);
+      setSavingAction(null);
+      setIsSaved(false);
     }
   };
 
@@ -229,17 +260,25 @@ export default function AdminNewArticlePage() {
         <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => handleSave(true)}
-            disabled={isSaving}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50"
+            disabled={isSaving || isSaved}
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50 transition-all"
           >
-            {isSaving ? 'Saving...' : 'Save as Draft'}
+            {savingAction === 'draft'
+              ? 'Saving Draft...'
+              : isSaved
+              ? 'Draft Saved! ✓'
+              : 'Save as Draft'}
           </button>
           <button
             onClick={() => handleSave(false)}
-            disabled={isSaving}
-            className="flex-1 sm:flex-none btn-primary disabled:opacity-50"
+            disabled={isSaving || isSaved}
+            className="flex-1 sm:flex-none btn-primary disabled:opacity-50 transition-all"
           >
-            {isSaving ? 'Publishing...' : 'Publish Post 🚀'}
+            {savingAction === 'publish'
+              ? 'Publishing...'
+              : isSaved
+              ? 'Published! ✓ 🚀'
+              : 'Publish Post 🚀'}
           </button>
         </div>
       </div>
@@ -482,18 +521,26 @@ export default function AdminNewArticlePage() {
           <button
             type="button"
             onClick={() => handleSave(true)}
-            disabled={isSaving}
-            className="px-5 py-3 rounded-xl border border-gray-200 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50"
+            disabled={isSaving || isSaved}
+            className="px-5 py-3 rounded-xl border border-gray-200 text-xs font-bold text-[#332D2F] hover:bg-gray-50 disabled:opacity-50 transition-all"
           >
-            {isSaving ? 'Saving...' : 'Save Draft'}
+            {savingAction === 'draft'
+              ? 'Saving Draft...'
+              : isSaved
+              ? 'Draft Saved! ✓'
+              : 'Save Draft'}
           </button>
           <button
             type="button"
             onClick={() => handleSave(false)}
-            disabled={isSaving}
-            className="btn-primary disabled:opacity-50"
+            disabled={isSaving || isSaved}
+            className="btn-primary disabled:opacity-50 transition-all"
           >
-            {isSaving ? 'Publishing...' : 'Publish Post 🚀'}
+            {savingAction === 'publish'
+              ? 'Publishing...'
+              : isSaved
+              ? 'Published! ✓ 🚀'
+              : 'Publish Post 🚀'}
           </button>
         </div>
       </div>

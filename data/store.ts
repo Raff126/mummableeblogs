@@ -455,18 +455,24 @@ export async function deleteArticle(id: string, slug?: string): Promise<boolean>
 
 export async function saveArticles(articles: Article[]): Promise<boolean> {
   if (typeof window !== 'undefined') {
-    // 1. Save to localStorage for instant UI feedback
-    safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
-    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ARTICLES, data: articles } }));
+    // 1. Ensure all articles have explicit status field matching isDraft
+    const normalizedArticles = articles.map((a) => ({
+      ...a,
+      status: (a.status || (a.isDraft ? 'draft' : 'published')) as 'published' | 'draft',
+      showGoodToKnow: a.showGoodToKnow ?? true,
+      goodToKnowEnabled: a.goodToKnowEnabled ?? true,
+    }));
 
-    // 2. Always sync to Firestore for persistent cross-device storage
-    try {
-      await saveArticlesToFirestore(articles as FirestoreArticle[]);
-    } catch (err) {
-      console.warn('Firestore sync failed (localStorage saved):', err);
-    }
+    // 2. Save to localStorage immediately for instant UI feedback
+    safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(normalizedArticles));
+    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ARTICLES, data: normalizedArticles } }));
 
-    // 3. Also sync to local API on dev server for file-based persistence
+    // 3. Sync to Firestore in background with timeout safety (does not block local saving)
+    saveArticlesToFirestore(normalizedArticles as FirestoreArticle[]).catch((err) => {
+      console.warn('Firestore sync background notice (localStorage preserved):', err);
+    });
+
+    // 4. Also sync to local API on dev server for file-based persistence
     const isLocalhost = Boolean(
       window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1' ||
@@ -474,11 +480,11 @@ export async function saveArticles(articles: Article[]): Promise<boolean> {
     );
     if (isLocalhost) {
       try {
-        await fetch('/api/articles/', {
+        fetch('/api/articles/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(articles),
-        });
+          body: JSON.stringify(normalizedArticles),
+        }).catch(() => {});
       } catch (err) {
         // Silently skip if endpoint unavailable
       }
@@ -489,13 +495,14 @@ export async function saveArticles(articles: Article[]): Promise<boolean> {
 
 /**
  * Load articles from Firestore (production) or API (localhost).
- * Merges with static JSON articles as fallback.
- * Firestore is treated as the source of truth when available.
+ * Merges with local articles and static JSON as fallback.
+ * Guarantees locally created / updated articles are never wiped out.
  */
 export async function loadArticlesFromServer(): Promise<Article[]> {
   if (typeof window === 'undefined') return ARTICLES;
 
   const deleted = getDeletedArticleIds();
+  const localArticles = getInitialArticles();
 
   // Try Firestore first (works on all environments)
   try {
@@ -510,13 +517,28 @@ export async function loadArticlesFromServer(): Promise<Article[]> {
         });
       } catch (_) {}
 
-      // Firestore data is the source of truth — merge with static JSON for any missing articles
       const fsMap = new Map(firestoreArticles.map((a) => [a.id, a]));
-      const merged = [...firestoreArticles];
+      const fsSlugMap = new Map(firestoreArticles.filter((a) => a.slug).map((a) => [a.slug, a]));
 
-      // Add any static JSON articles that aren't in Firestore and aren't deleted
+      // Start with Firestore articles
+      const merged: FirestoreArticle[] = [...firestoreArticles];
+
+      // CRITICAL FIX: Preserve any locally created / updated articles that aren't in Firestore yet
+      for (const localArt of localArticles) {
+        const inFs = fsMap.has(localArt.id) || (localArt.slug && fsSlugMap.has(localArt.slug));
+        const isDeleted = deleted.has(localArt.id) || (localArt.slug && deleted.has(localArt.slug));
+        if (!inFs && !isDeleted) {
+          merged.unshift(localArt as FirestoreArticle);
+        }
+      }
+
+      // Add any static JSON articles that aren't in Firestore, aren't local, and aren't deleted
+      const mergedIdSet = new Set(merged.map((a) => a.id));
+      const mergedSlugSet = new Set(merged.filter((a) => a.slug).map((a) => a.slug));
       for (const staticArt of ARTICLES) {
-        if (!fsMap.has(staticArt.id) && !deleted.has(staticArt.id) && !deleted.has(staticArt.slug)) {
+        const exists = mergedIdSet.has(staticArt.id) || (staticArt.slug && mergedSlugSet.has(staticArt.slug));
+        const isDeleted = deleted.has(staticArt.id) || (staticArt.slug && deleted.has(staticArt.slug));
+        if (!exists && !isDeleted) {
           merged.push(staticArt as FirestoreArticle);
         }
       }
@@ -525,10 +547,16 @@ export async function loadArticlesFromServer(): Promise<Article[]> {
         (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))
       );
 
-      // Update localStorage cache
-      safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(filtered));
+      // Normalize status property
+      const finalArticles = filtered.map((a) => ({
+        ...a,
+        status: (a.status || (a.isDraft ? 'draft' : 'published')) as 'published' | 'draft',
+      })) as Article[];
 
-      return filtered as Article[];
+      // Update localStorage cache
+      safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(finalArticles));
+
+      return finalArticles;
     }
   } catch (err) {
     console.warn('Firestore fetch failed, falling back:', err);
@@ -542,11 +570,30 @@ export async function loadArticlesFromServer(): Promise<Article[]> {
     if (res.ok) {
       const serverArticles = await res.json();
       if (Array.isArray(serverArticles) && serverArticles.length > 0) {
-        const filtered = serverArticles.filter(
+        const serverIdSet = new Set(serverArticles.map((a: Article) => a.id));
+        const serverSlugSet = new Set(serverArticles.filter((a: Article) => a.slug).map((a: Article) => a.slug));
+
+        // Start with server articles
+        const merged = [...serverArticles];
+
+        // Merge any local articles not yet on server
+        for (const localArt of localArticles) {
+          const inServer = serverIdSet.has(localArt.id) || (localArt.slug && serverSlugSet.has(localArt.slug));
+          const isDeleted = deleted.has(localArt.id) || (localArt.slug && deleted.has(localArt.slug));
+          if (!inServer && !isDeleted) {
+            merged.unshift(localArt);
+          }
+        }
+
+        const filtered = merged.filter(
           (a: Article) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))
         );
-        safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(filtered));
-        return filtered;
+        const finalArticles = filtered.map((a: Article) => ({
+          ...a,
+          status: (a.status || (a.isDraft ? 'draft' : 'published')) as 'published' | 'draft',
+        }));
+        safeSetLocalStorage(STORAGE_KEYS.ARTICLES, JSON.stringify(finalArticles));
+        return finalArticles;
       }
     }
   } catch (_) {}

@@ -11,6 +11,8 @@ export async function POST(request: Request) {
 
     const contentType = request.headers.get('content-type') || '';
 
+    const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+
     // 1. Handle JSON Payload with Base64 Data URL
     if (contentType.includes('application/json')) {
       const body = await request.json();
@@ -36,6 +38,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Image must be a base64 data URL' }, { status: 400 });
       }
 
+      if (buffer.length > MAX_IMAGE_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: 'Image is too large. Maximum allowed file size is 2 MB.' },
+          { status: 400 }
+        );
+      }
+
       const cleanName = (filename || `upload-${Date.now()}`)
         .replace(/\.[^/.]+$/, '')
         .replace(/[^a-zA-Z0-9-_]/g, '_');
@@ -59,6 +68,13 @@ export async function POST(request: Request) {
 
       if (!file) {
         return NextResponse.json({ error: 'No file found in form data' }, { status: 400 });
+      }
+
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: 'Image is too large. Maximum allowed file size is 2 MB.' },
+          { status: 400 }
+        );
       }
 
       const bytes = await file.arrayBuffer();
