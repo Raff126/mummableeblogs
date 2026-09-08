@@ -53,18 +53,54 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .article-prose table {
-  display: block;
-  width: 100%;
+  width: 100% !important;
   max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-bottom: 1.5rem;
+  margin: 1.5rem 0 2rem 0;
   border-collapse: collapse;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #f1e4e6;
+  table-layout: auto;
 }
 
-.article-prose td, .article-prose th {
+.article-prose tr {
+  border-bottom: 1px solid #f3e9eb;
+}
+
+.article-prose tr:last-child {
+  border-bottom: none;
+}
+
+.article-prose tr:nth-child(even) {
+  background-color: #fdfafb;
+}
+
+.article-prose th {
+  background-color: #f8edef;
+  color: #683846;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.75rem 1.25rem !important;
+  border-bottom: 2px solid #e8d0d5;
+  font-size: 0.875rem;
+  letter-spacing: 0.025em;
+}
+
+.article-prose td {
+  padding: 0.75rem 1.25rem !important;
+  color: #332d2f;
+  vertical-align: top;
+  font-size: 0.9375rem;
+  line-height: 1.6;
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+.article-prose td p, .article-prose th p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.6 !important;
 }
 
 @media (max-width: 640px) {

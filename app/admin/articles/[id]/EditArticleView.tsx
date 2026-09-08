@@ -19,6 +19,7 @@ import {
 import { getAllArticles, ArticleItem } from '../../../../data/articles';
 import { CATEGORIES } from '../../../../data/categories';
 import { compressImage } from '../../../../utils/imageCompressor';
+import { formatArticleContent } from '../../../../utils/contentFormatter';
 import ImageInputWithPaste from '../../../../components/admin/ImageInputWithPaste';
 import RichContentEditor from '../../../../components/admin/RichContentEditor';
 
@@ -239,7 +240,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
         slug: cleanSlug,
         category,
         excerpt: excerpt.trim(),
-        content: content.trim() || `<p>${excerpt.trim()}</p>`,
+        content: formatArticleContent(content.trim()) || `<p>${excerpt.trim()}</p>`,
         featuredImage: featuredImage || targetArticle?.featuredImage || '',
         imageAlt: targetArticle?.imageAlt || title.trim(),
         imageCaption: imageCaption.trim(),

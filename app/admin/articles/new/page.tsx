@@ -17,6 +17,7 @@ import {
 } from '../../../../data/store';
 import { CATEGORIES } from '../../../../data/categories';
 import { compressImage } from '../../../../utils/imageCompressor';
+import { formatArticleContent } from '../../../../utils/contentFormatter';
 import ImageInputWithPaste from '../../../../components/admin/ImageInputWithPaste';
 import RichContentEditor from '../../../../components/admin/RichContentEditor';
 
@@ -198,7 +199,7 @@ export default function AdminNewArticlePage() {
         title: cleanTitle || title.trim().slice(0, 180),
         category,
         excerpt: finalExcerpt,
-        content: content.trim() || `<p>${finalExcerpt}</p>`,
+        content: formatArticleContent(content.trim()) || `<p>${finalExcerpt}</p>`,
         publishedAt: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: computedReadTime,
         author: 'Donne',
