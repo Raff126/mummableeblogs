@@ -19,7 +19,7 @@ interface ExpatGuideCard {
 
 const DEFAULT_EXPAT_CARDS: ExpatGuideCard[] = [
   {
-    id: 'art-15',
+    id: 'expat-1',
     slug: 'how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
     badge: 'COMMUNITY & FRIENDSHIPS',
     title: 'How to Build a Supportive Mum Village as an Expat',
@@ -30,7 +30,7 @@ const DEFAULT_EXPAT_CARDS: ExpatGuideCard[] = [
     bgColor: 'bg-[#B75B70]',
   },
   {
-    id: 'art-19',
+    id: 'expat-2',
     slug: 'choosing-between-british-ib-and-american-curriculums-in-the-uae',
     badge: 'SCHOOL & EDUCATION',
     title: 'Choosing Between British, IB, & American Curriculums',
@@ -41,7 +41,7 @@ const DEFAULT_EXPAT_CARDS: ExpatGuideCard[] = [
     bgColor: 'bg-[#4D7987]',
   },
   {
-    id: 'art-17',
+    id: 'expat-3',
     slug: 'how-we-handle-seasonal-transitions-and-summer-months-with-kids',
     badge: 'UAE LIVING & SEASONS',
     title: 'Handling Seasonal Transitions & Summer with Kids',
@@ -52,7 +52,7 @@ const DEFAULT_EXPAT_CARDS: ExpatGuideCard[] = [
     bgColor: 'bg-[#D79A30]',
   },
   {
-    id: 'art-16',
+    id: 'expat-4',
     slug: 'our-daily-uae-family-routine-balancing-school-heat-and-activities',
     badge: 'PARENTING & ROUTINES',
     title: 'Our Daily UAE Family Routine: School & Heat',
@@ -73,8 +73,8 @@ export default function ExpatEditSection() {
     const local = getInitialArticles();
     const all = local.length > 0 ? local : getAllArticles();
 
-    const resolveCard = (card: ExpatGuideCard, articleList: ArticleItem[]): ExpatGuideCard | null => {
-      if (deleted.has(card.id) || deleted.has(card.slug)) return null;
+    const isCardPublished = (card: ExpatGuideCard, articleList: ArticleItem[]) => {
+      if (deleted.has(card.id) || deleted.has(card.slug)) return false;
       const matched = articleList.find(
         (a) =>
           a.slug === card.slug ||
@@ -82,34 +82,21 @@ export default function ExpatEditSection() {
           (a.slug && card.link.includes(a.slug))
       );
       if (matched) {
-        if (matched.isDraft || matched.status === 'draft') return null;
-        if (deleted.has(matched.id) || (matched.slug && deleted.has(matched.slug))) return null;
-        return {
-          ...card,
-          id: matched.id || card.id,
-          slug: matched.slug || card.slug,
-          title: matched.title || card.title,
-          image: matched.featuredImage || matched.thumbnailImage || card.image,
-          readTime: matched.readTime || card.readTime,
-          link: `/${matched.category || 'the-expat-edit'}/${matched.slug || card.slug}`,
-        };
+        if (matched.isDraft || matched.status === 'draft') return false;
+        if (deleted.has(matched.id) || (matched.slug && deleted.has(matched.slug))) return false;
       }
-      return card;
+      return true;
     };
 
-    // Filter and update with local store first
-    const visibleCards = DEFAULT_EXPAT_CARDS
-      .map((c) => resolveCard(c, all))
-      .filter((c): c is ExpatGuideCard => c !== null);
+    // Filter using local store first
+    const visibleCards = DEFAULT_EXPAT_CARDS.filter((c) => isCardPublished(c, all));
     setCards(visibleCards);
 
     // Sync with Firestore
     try {
       const serverArticles = await loadArticlesFromServer();
       if (Array.isArray(serverArticles)) {
-        const serverVisible = DEFAULT_EXPAT_CARDS
-          .map((c) => resolveCard(c, serverArticles))
-          .filter((c): c is ExpatGuideCard => c !== null);
+        const serverVisible = DEFAULT_EXPAT_CARDS.filter((c) => isCardPublished(c, serverArticles));
         setCards(serverVisible);
       }
     } catch (_) {}
