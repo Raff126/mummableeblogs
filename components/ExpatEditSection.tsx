@@ -5,65 +5,108 @@ import Link from 'next/link';
 import { ArticleItem, getAllArticles } from '../data/articles';
 import { getInitialArticles, getDeletedArticleIds, loadArticlesFromServer } from '../data/store';
 
-const BADGE_COLORS = ['bg-[#B75B70]', 'bg-[#4D7987]', 'bg-[#D79A30]', 'bg-[#683846]'];
+interface ExpatGuideCard {
+  id: string;
+  slug: string;
+  badge: string;
+  title: string;
+  category: string;
+  readTime: string;
+  image: string;
+  link: string;
+  bgColor: string;
+}
+
+const DEFAULT_EXPAT_CARDS: ExpatGuideCard[] = [
+  {
+    id: 'expat-1',
+    slug: 'how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
+    badge: 'COMMUNITY & FRIENDSHIPS',
+    title: 'How to Build a Supportive Mum Village as an Expat',
+    category: 'The Expat Edit',
+    readTime: '4 min read',
+    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&fit=crop&q=80',
+    link: '/the-expat-edit/how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
+    bgColor: 'bg-[#B75B70]',
+  },
+  {
+    id: 'expat-2',
+    slug: 'choosing-between-british-ib-and-american-curriculums-in-the-uae',
+    badge: 'SCHOOL & EDUCATION',
+    title: 'Choosing Between British, IB, & American Curriculums',
+    category: 'The Expat Edit',
+    readTime: '6 min read',
+    image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&fit=crop&q=80',
+    link: '/the-expat-edit/choosing-between-british-ib-and-american-curriculums-in-the-uae',
+    bgColor: 'bg-[#4D7987]',
+  },
+  {
+    id: 'expat-3',
+    slug: 'how-we-handle-seasonal-transitions-and-summer-months-with-kids',
+    badge: 'UAE LIVING & SEASONS',
+    title: 'Handling Seasonal Transitions & Summer with Kids',
+    category: 'The Expat Edit',
+    readTime: '4 min read',
+    image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=800&fit=crop&q=80',
+    link: '/the-expat-edit/how-we-handle-seasonal-transitions-and-summer-months-with-kids',
+    bgColor: 'bg-[#D79A30]',
+  },
+  {
+    id: 'expat-4',
+    slug: 'our-daily-uae-family-routine-balancing-school-heat-and-activities',
+    badge: 'PARENTING & ROUTINES',
+    title: 'Our Daily UAE Family Routine: School & Heat',
+    category: 'The Expat Edit',
+    readTime: '4 min read',
+    image: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&fit=crop&q=80',
+    link: '/the-expat-edit/our-daily-uae-family-routine-balancing-school-heat-and-activities',
+    bgColor: 'bg-[#683846]',
+  },
+];
 
 export default function ExpatEditSection() {
-  const [guides, setGuides] = useState<ArticleItem[]>([]);
+  const [cards, setCards] = useState<ExpatGuideCard[]>(DEFAULT_EXPAT_CARDS);
   const [mounted, setMounted] = useState(false);
 
-  const refreshGuides = async () => {
+  const refreshCards = async () => {
     const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
     const all = local.length > 0 ? local : getAllArticles();
-    const isExpat = (cat: string) => cat === 'the-expat-edit' || cat === 'expat-edit';
-    const isPublished = (a: ArticleItem) => !a.isDraft && a.status !== 'draft' && !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug));
 
-    // The curated expat guides order
-    const preferredSlugs = [
-      'how-to-build-a-supportive-mum-community-as-an-expat-in-the-uae',
-      'choosing-between-british-ib-and-american-curriculums-in-the-uae',
-      'how-we-handle-seasonal-transitions-and-summer-months-with-kids',
-      'our-daily-uae-family-routine-balancing-school-heat-and-activities',
-    ];
-
-    const pickPublishedExpatGuides = (list: ArticleItem[]) => {
-      const published = list.filter((a) => isExpat(a.category) && isPublished(a));
-      const sorted: ArticleItem[] = [];
-      const remaining: ArticleItem[] = [];
-
-      for (const pSlug of preferredSlugs) {
-        const found = published.find((a) => a.slug === pSlug);
-        if (found) {
-          sorted.push(found);
-        }
+    const isCardPublished = (card: ExpatGuideCard, articleList: ArticleItem[]) => {
+      if (deleted.has(card.id) || deleted.has(card.slug)) return false;
+      const matched = articleList.find(
+        (a) =>
+          a.slug === card.slug ||
+          a.id === card.id ||
+          (a.slug && card.link.includes(a.slug))
+      );
+      if (matched) {
+        if (matched.isDraft || matched.status === 'draft') return false;
+        if (deleted.has(matched.id) || (matched.slug && deleted.has(matched.slug))) return false;
       }
-
-      for (const item of published) {
-        if (!sorted.some((s) => s.id === item.id || s.slug === item.slug)) {
-          remaining.push(item);
-        }
-      }
-
-      return [...sorted, ...remaining].slice(0, 4);
+      return true;
     };
 
-    const initial = pickPublishedExpatGuides(all);
-    setGuides(initial);
+    // Filter using local store first
+    const visibleCards = DEFAULT_EXPAT_CARDS.filter((c) => isCardPublished(c, all));
+    setCards(visibleCards);
 
+    // Sync with Firestore
     try {
-      const server = await loadArticlesFromServer();
-      if (Array.isArray(server) && server.length > 0) {
-        const serverPublished = pickPublishedExpatGuides(server);
-        setGuides(serverPublished);
+      const serverArticles = await loadArticlesFromServer();
+      if (Array.isArray(serverArticles)) {
+        const serverVisible = DEFAULT_EXPAT_CARDS.filter((c) => isCardPublished(c, serverArticles));
+        setCards(serverVisible);
       }
     } catch (_) {}
   };
 
   useEffect(() => {
     setMounted(true);
-    refreshGuides();
+    refreshCards();
 
-    const handleUpdate = () => refreshGuides();
+    const handleUpdate = () => refreshCards();
     window.addEventListener('mummabee_content_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('focus', handleUpdate);
@@ -75,8 +118,8 @@ export default function ExpatEditSection() {
     };
   }, []);
 
-  // Never show draft or empty cards to visitors
-  if (guides.length === 0) {
+  // If all cards were unpublished/drafted, hide section
+  if (cards.length === 0) {
     return null;
   }
 
@@ -107,28 +150,24 @@ export default function ExpatEditSection() {
 
         {/* Dynamic Published Expat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {guides.map((guide, idx) => {
-            const badge = guide.subcategory || (idx === 0 ? 'COMMUNITY & FRIENDSHIPS' : idx === 1 ? 'SCHOOL & EDUCATION' : idx === 2 ? 'UAE LIVING & SEASONS' : 'PARENTING & ROUTINES');
-            const bgColor = BADGE_COLORS[idx % BADGE_COLORS.length];
-            const link = `/${guide.category}/${guide.slug}`;
-
+          {cards.map((card) => {
             return (
               <Link
-                key={guide.id || guide.slug}
-                href={link}
+                key={card.id || card.slug}
+                href={card.link}
                 className="group bg-white rounded-[24px] border border-gray-100 shadow-soft hover:shadow-soft-hover hover:-translate-y-1 transition-all overflow-hidden flex flex-col"
               >
                 {/* Image Container */}
                 <div className="relative h-48 overflow-hidden bg-gray-100">
                   <img
-                    src={guide.featuredImage}
-                    alt={guide.imageAlt || guide.title}
+                    src={card.image}
+                    alt={card.title}
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => { (e.target as HTMLImageElement).src = '/images/mama-logo.png'; }}
                   />
-                  <span className={`absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white px-3 py-1 rounded-full shadow-xs ${bgColor}`}>
-                    {badge}
+                  <span className={`absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white px-3 py-1 rounded-full shadow-xs ${card.bgColor}`}>
+                    {card.badge}
                   </span>
                 </div>
 
@@ -136,15 +175,15 @@ export default function ExpatEditSection() {
                 <div className="p-6 space-y-2 flex-1 flex flex-col justify-between bg-white">
                   <div>
                     <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block mb-1">
-                      The Expat Edit
+                      {card.category}
                     </span>
                     <h3 className="font-serif text-lg font-bold text-[#332D2F] group-hover:text-[#B75B70] transition-colors leading-snug line-clamp-2">
-                      {guide.title}
+                      {card.title}
                     </h3>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-[11px] text-[#332D2F]/60 font-sans">
-                    <span>{guide.readTime || '4 min read'}</span>
+                    <span>{card.readTime || '4 min read'}</span>
                     <span className="font-bold text-[#B75B70] group-hover:translate-x-1 transition-transform">
                       Read Guide →
                     </span>
