@@ -13,16 +13,42 @@ export default function AdminHomepageEditPage() {
   useEffect(() => {
     const local = getInitialHomepage();
     setHp(local);
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data === 'object') {
-          setHp((prev) => (prev ? { ...prev, ...data } : data));
+
+    const loadRemote = async () => {
+      // 1. Try Firestore first
+      try {
+        const { fetchHomepageFromFirestore } = await import('../../../utils/firestoreSettings');
+        const fsData = await fetchHomepageFromFirestore();
+        if (fsData && typeof fsData === 'object' && (fsData.heroHeadline || fsData.heroImage)) {
+          setHp((prev) => {
+            if (!prev) return fsData;
+            if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
+              return prev;
+            }
+            return { ...prev, ...fsData };
+          });
+          return;
         }
-      })
-      .catch(() => {});
+      } catch (_) {}
+
+      // 2. Fallback to API / static JSON
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
+      try {
+        const res = await fetch(endpoint, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object') {
+            setHp((prev) => {
+              if (!prev) return data;
+              return { ...data, ...prev };
+            });
+          }
+        }
+      } catch (_) {}
+    };
+
+    loadRemote();
   }, []);
 
   if (!hp) return null;

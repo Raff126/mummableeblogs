@@ -8,7 +8,7 @@ export default function DonneSection() {
   const [content, setContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE);
   const [imgSrc, setImgSrc] = useState<string>('');
 
-  const loadLatest = () => {
+  const loadLatest = async () => {
     const localHp = getInitialHomepage();
     const localAbout = getInitialAbout();
     
@@ -17,18 +17,40 @@ export default function DonneSection() {
     setContent(localHp);
     setImgSrc(resolvedImage);
 
-    // Fetch fresh homepage data from server or static json
+    // 1. Query live Firestore first (cross-device cloud sync)
+    try {
+      const { fetchHomepageFromFirestore } = await import('../utils/firestoreSettings');
+      const fsData = await fetchHomepageFromFirestore();
+      if (fsData && typeof fsData === 'object' && (fsData.donneHeadline || fsData.donneImage)) {
+        setContent((prev) => {
+          if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
+            return prev;
+          }
+          const merged = { ...prev, ...fsData };
+          if (fsData.donneImage) {
+            setImgSrc(fsData.donneImage);
+          }
+          try {
+            localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(merged));
+          } catch (_) {}
+          return merged;
+        });
+        return;
+      }
+    } catch (_) {}
+
+    // 2. Fetch fresh homepage data from server or static json without destructive overwriting
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
     fetch(endpoint, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data === 'object') {
-          try { localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(data)); } catch (_) {}
           setContent((prev) => {
-            const merged = { ...prev, ...data };
-            if (data.donneImage) {
-              setImgSrc(data.donneImage);
+            const merged = { ...data, ...prev };
+            const effectiveImage = merged.donneImage || resolvedImage;
+            if (effectiveImage) {
+              setImgSrc(effectiveImage);
             }
             return merged;
           });

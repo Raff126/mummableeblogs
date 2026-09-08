@@ -4,10 +4,17 @@ import path from 'path';
 import { DiscountCode, DEFAULT_DEALS } from '../../../data/store';
 
 const FILE_PATH = path.join(process.cwd(), 'data', 'deals.json');
+const PUBLIC_FILE_PATH = path.join(process.cwd(), 'public', 'data', 'deals.json');
 
 function readFromFile(): DiscountCode[] {
   try {
-    if (fs.existsSync(FILE_PATH)) {
+    if (fs.existsSync(PUBLIC_FILE_PATH)) {
+      const data = fs.readFileSync(PUBLIC_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } else if (fs.existsSync(FILE_PATH)) {
       const data = fs.readFileSync(FILE_PATH, 'utf-8');
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
@@ -15,7 +22,7 @@ function readFromFile(): DiscountCode[] {
       }
     }
   } catch (error) {
-    console.error('Error reading data/deals.json:', error);
+    console.error('Error reading deals.json:', error);
   }
   return DEFAULT_DEALS;
 }
@@ -27,9 +34,16 @@ function writeToFile(deals: DiscountCode[]): boolean {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(FILE_PATH, JSON.stringify(deals, null, 2), 'utf-8');
+
+    const publicDir = path.dirname(PUBLIC_FILE_PATH);
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    fs.writeFileSync(PUBLIC_FILE_PATH, JSON.stringify(deals, null, 2), 'utf-8');
+
     return true;
   } catch (error) {
-    console.error('Error writing data/deals.json:', error);
+    console.error('Error writing deals.json:', error);
     return false;
   }
 }

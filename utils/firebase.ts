@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, signInAnonymously } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -21,6 +21,20 @@ export const getFirebaseAuth = (): Auth | null => {
   } catch (err) {
     console.error('Firebase Auth initialization error:', err);
     return null;
+  }
+};
+
+/** Ensure an active Firebase Auth session so Firestore security rules permit writes */
+export const ensureFirebaseAuth = async (): Promise<boolean> => {
+  const auth = getFirebaseAuth();
+  if (!auth) return false;
+  if (auth.currentUser) return true;
+  try {
+    await signInAnonymously(auth);
+    return true;
+  } catch (err) {
+    console.warn('Firebase anonymous sign-in error:', err);
+    return false;
   }
 };
 

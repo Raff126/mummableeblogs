@@ -13,16 +13,42 @@ export default function AdminAboutEditPage() {
   useEffect(() => {
     const local = getInitialAbout();
     setAbout(local);
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/about/?t=${Date.now()}` : `/data/about.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data === 'object') {
-          setAbout((prev) => (prev ? { ...prev, ...data } : data));
+
+    const loadRemote = async () => {
+      // 1. Try Firestore first
+      try {
+        const { fetchAboutFromFirestore } = await import('../../../utils/firestoreSettings');
+        const fsData = await fetchAboutFromFirestore();
+        if (fsData && typeof fsData === 'object' && (fsData.headline || fsData.profileImage)) {
+          setAbout((prev) => {
+            if (!prev) return fsData;
+            if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
+              return prev;
+            }
+            return { ...prev, ...fsData };
+          });
+          return;
         }
-      })
-      .catch(() => {});
+      } catch (_) {}
+
+      // 2. Fallback to API / static JSON
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const endpoint = isLocal ? `/api/about/?t=${Date.now()}` : `/data/about.json?t=${Date.now()}`;
+      try {
+        const res = await fetch(endpoint, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object') {
+            setAbout((prev) => {
+              if (!prev) return data;
+              return { ...data, ...prev };
+            });
+          }
+        }
+      } catch (_) {}
+    };
+
+    loadRemote();
   }, []);
 
   if (!about) return null;

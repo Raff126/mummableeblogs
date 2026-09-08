@@ -34,20 +34,20 @@ export default function GuideCard({ article }: GuideCardProps) {
       </Link>
 
       {/* Content */}
-      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#B75B70]">
-            <span>{categoryInfo.name}</span>
-            {article.location && <span className="text-[#332D2F]/60">• 📍 {article.location}</span>}
+      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4 min-w-0">
+        <div className="space-y-2 min-w-0">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#B75B70] min-w-0">
+            <span className="truncate">{categoryInfo.name}</span>
+            {article.location && <span className="text-[#332D2F]/60 truncate">• 📍 {article.location}</span>}
           </div>
 
-          <h3 className="font-serif text-lg sm:text-xl font-bold text-[#683846] group-hover:text-[#B75B70] transition-colors leading-snug">
+          <h3 className="font-serif text-lg sm:text-xl font-bold text-[#683846] group-hover:text-[#B75B70] transition-colors leading-snug line-clamp-2 break-words">
             <Link href={`/${article.category}/${article.slug}`} prefetch={false}>
               {article.title}
             </Link>
           </h3>
 
-          <p className="text-xs text-[#332D2F] line-clamp-2 leading-relaxed">
+          <p className="text-xs text-[#332D2F] line-clamp-2 leading-relaxed break-words">
             {article.excerpt}
           </p>
         </div>

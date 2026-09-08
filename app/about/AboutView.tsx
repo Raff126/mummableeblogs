@@ -36,23 +36,48 @@ export default function AboutView({ topGuides: initialTopGuides }: { topGuides: 
     );
     setGuides(published.slice(0, 4));
 
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/about/?t=${Date.now()}` : `/data/about.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data === 'object') {
-          try { localStorage.setItem(STORAGE_KEYS.ABOUT, JSON.stringify(data)); } catch (_) {}
+    // 1. Query live Firestore first (cross-device cloud sync)
+    (async () => {
+      try {
+        const { fetchAboutFromFirestore } = await import('../../utils/firestoreSettings');
+        const fsData = await fetchAboutFromFirestore();
+        if (fsData && typeof fsData === 'object' && (fsData.headline || fsData.profileImage)) {
           setContent((prev) => {
-            const merged = { ...prev, ...data };
-            if (data.profileImage) {
-              setImgSrc(data.profileImage);
+            if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
+              return prev;
             }
+            const merged = { ...prev, ...fsData };
+            if (fsData.profileImage) {
+              setImgSrc(fsData.profileImage);
+            }
+            try {
+              localStorage.setItem(STORAGE_KEYS.ABOUT, JSON.stringify(merged));
+            } catch (_) {}
             return merged;
           });
+          return;
         }
-      })
-      .catch(() => {});
+      } catch (_) {}
+
+      // 2. Fallback to API / static JSON without destructive overwriting
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const endpoint = isLocal ? `/api/about/?t=${Date.now()}` : `/data/about.json?t=${Date.now()}`;
+      fetch(endpoint, { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && typeof data === 'object') {
+            setContent((prev) => {
+              const merged = { ...data, ...prev };
+              const effectiveImg = merged.profileImage || resolvedImage;
+              if (effectiveImg) {
+                setImgSrc(effectiveImg);
+              }
+              return merged;
+            });
+          }
+        })
+        .catch(() => {});
+    })();
   };
 
   useEffect(() => {

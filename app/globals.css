@@ -20,9 +20,26 @@ body {
   overflow-x: hidden;
 }
 
+/* Universal safe word-wrapping for cards, headings & mobile layouts */
+.break-long-words {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  word-break: break-all !important;
+  word-wrap: break-word !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.break-anywhere {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  word-wrap: break-word !important;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Cormorant Garamond', 'Georgia', serif;
   color: #683846;
+  overflow-wrap: break-word;
 }
 
 /* Article Editorial Prose Typography */
@@ -31,6 +48,23 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Inter', sans-serif;
   font-size: 1.0625rem; /* ~17px desktop */
   line-height: 1.85;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.article-prose table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1.5rem;
+  border-collapse: collapse;
+}
+
+.article-prose td, .article-prose th {
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 640px) {

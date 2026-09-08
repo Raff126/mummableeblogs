@@ -7,6 +7,7 @@ import {
   SiteSettings,
   getAuthorizedAdminEmails,
   saveAuthorizedAdminEmails,
+  STORAGE_KEYS,
 } from '../../../data/store';
 import { isAdmin } from '../../../data/users';
 import Link from 'next/link';
@@ -17,11 +18,26 @@ export default function AdminSettingsPage() {
   const [newEmail, setNewEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     setSettings(getInitialSettings());
     setAdminEmails(getAuthorizedAdminEmails());
+
+    // Query Firestore for live cross-device settings
+    (async () => {
+      try {
+        const { fetchSettingsFromFirestore } = await import('../../../utils/firestoreSettings');
+        const fsSettings = await fetchSettingsFromFirestore();
+        if (fsSettings && typeof fsSettings === 'object' && fsSettings.siteName) {
+          setSettings((prev) => (prev ? { ...prev, ...fsSettings } : fsSettings));
+          try {
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(fsSettings));
+          } catch (_) {}
+        }
+      } catch (_) {}
+    })();
   }, []);
 
   if (!isAdmin()) {
@@ -88,6 +104,28 @@ export default function AdminSettingsPage() {
     setTimeout(() => setMessage(''), 3500);
   };
 
+  const handleToggleComingSoon = async () => {
+    if (!settings || isTogglingStatus) return;
+    const nextVal = !settings.comingSoonMode;
+    const updated = { ...settings, comingSoonMode: nextVal };
+    setSettings(updated);
+    setIsTogglingStatus(true);
+    try {
+      await saveSettings(updated);
+      setMessage(
+        nextVal
+          ? '🚧 Coming Soon Mode is now ACTIVE! Visitors will see the Coming Soon landing page.'
+          : '🌐 Website is now LIVE! All pages are visible to public visitors.'
+      );
+      setTimeout(() => setMessage(''), 4500);
+    } catch (err) {
+      console.error('Save coming soon status error:', err);
+      setSettings(settings);
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -142,10 +180,11 @@ export default function AdminSettingsPage() {
             <div className="flex items-center gap-3 self-start sm:self-center">
               <button
                 type="button"
-                onClick={() => setSettings({ ...settings, comingSoonMode: !settings.comingSoonMode })}
+                disabled={isTogglingStatus}
+                onClick={handleToggleComingSoon}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   settings.comingSoonMode ? 'bg-[#DF2A64]' : 'bg-gray-300'
-                }`}
+                } ${isTogglingStatus ? 'opacity-60 cursor-wait' : ''}`}
                 role="switch"
                 aria-checked={settings.comingSoonMode}
               >
@@ -155,23 +194,40 @@ export default function AdminSettingsPage() {
                   }`}
                 />
               </button>
-              <span className="text-xs font-bold text-[#683846]">
-                {settings.comingSoonMode ? 'Coming Soon ON' : 'Live ON'}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-[#683846]">
+                  {settings.comingSoonMode ? 'Coming Soon ON' : 'Live ON'}
+                </span>
+                {isTogglingStatus && (
+                  <span className="text-[10px] text-[#B75B70] font-semibold animate-pulse">
+                    Saving...
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-[#B75B70]/15 flex items-center justify-between text-[11px]">
+          <div className="pt-2 border-t border-[#B75B70]/15 flex flex-wrap items-center justify-between gap-2 text-[11px]">
             <span className="text-[#332D2F]/70">
               Preview how visitors see the Coming Soon page:
             </span>
-            <Link
-              href="/coming-soon"
-              target="_blank"
-              className="font-bold text-[#B75B70] hover:text-[#DF2A64] underline flex items-center gap-1"
-            >
-              <span>View Coming Soon Page ↗</span>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/coming-soon"
+                target="_blank"
+                className="font-bold text-[#B75B70] hover:text-[#DF2A64] underline flex items-center gap-1"
+              >
+                <span>View Landing Page ↗</span>
+              </Link>
+              <span className="text-gray-300">•</span>
+              <Link
+                href="/?preview=visitor"
+                target="_blank"
+                className="font-bold text-[#B75B70] hover:text-[#DF2A64] underline flex items-center gap-1"
+              >
+                <span>Preview Homepage as Visitor ↗</span>
+              </Link>
+            </div>
           </div>
         </div>
 

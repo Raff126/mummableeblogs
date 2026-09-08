@@ -3,6 +3,7 @@ import './globals.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import AnalyticsTracker from '../components/AnalyticsTracker';
+import WebsiteGate from '../components/WebsiteGate';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -121,9 +122,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col antialiased selection:bg-desert-blush selection:text-mumma-rose" suppressHydrationWarning>
         <AnalyticsTracker />
-        <Header />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+        <WebsiteGate>
+          <Header />
+          <main className="flex-grow">{children}</main>
+          <Footer />
+        </WebsiteGate>
       </body>
     </html>
   );

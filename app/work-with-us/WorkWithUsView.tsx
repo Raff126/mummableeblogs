@@ -9,6 +9,44 @@ export default function WorkWithUsView() {
 
   useEffect(() => {
     setContent(getInitialWorkWithUs());
+
+    const loadContent = async () => {
+      // 1. Query Firestore first
+      try {
+        const { fetchWorkWithUsFromFirestore } = await import('../../utils/firestoreSettings');
+        const fsData = await fetchWorkWithUsFromFirestore();
+        if (fsData && typeof fsData === 'object' && fsData.headline) {
+          setContent(fsData);
+          try {
+            localStorage.setItem('mummabee_work_with_us', JSON.stringify(fsData));
+          } catch (_) {}
+          return;
+        }
+      } catch (_) {}
+
+      // 2. Fallback to API / static JSON
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const endpoint = isLocal ? `/api/work-with-us/?t=${Date.now()}` : `/data/work-with-us.json?t=${Date.now()}`;
+      try {
+        const res = await fetch(endpoint, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object' && data.headline) {
+            setContent((prev) => ({ ...data, ...prev }));
+          }
+        }
+      } catch (_) {}
+    };
+
+    loadContent();
+
+    const handleUpdate = () => loadContent();
+    window.addEventListener('mummabee_content_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, []);
 
   const formats = [

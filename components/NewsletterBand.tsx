@@ -10,16 +10,33 @@ export default function NewsletterBand() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [content, setContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE);
 
-  const loadLatest = () => {
+  const loadLatest = async () => {
     const local = getInitialHomepage();
     setContent(local);
+
+    // 1. Query live Firestore first (cross-device cloud sync)
+    try {
+      const { fetchHomepageFromFirestore } = await import('../utils/firestoreSettings');
+      const fsData = await fetchHomepageFromFirestore();
+      if (fsData && typeof fsData === 'object' && (fsData.newsletterHeadline || fsData.newsletterSubtext)) {
+        setContent((prev) => {
+          if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
+            return prev;
+          }
+          return { ...prev, ...fsData };
+        });
+        return;
+      }
+    } catch (_) {}
+
+    // 2. Fallback to API / static JSON
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
     fetch(endpoint, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data === 'object') {
-          setContent((prev) => ({ ...prev, ...data }));
+          setContent((prev) => ({ ...data, ...prev }));
         }
       })
       .catch(() => {});

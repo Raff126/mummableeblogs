@@ -41,28 +41,8 @@ export const metadata: Metadata = {
   },
 };
 
-import fs from 'fs';
-import path from 'path';
 import HomePageView from '../components/HomePageView';
 
-function getInitialComingSoon(): boolean {
-  // In development (localhost), show the full behind-the-scenes website so you can work on it!
-  if (process.env.NODE_ENV !== 'production') {
-    return false;
-  }
-  try {
-    const filePath = path.join(process.cwd(), 'data', 'settings.json');
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      if (typeof data.comingSoonMode === 'boolean') {
-        return data.comingSoonMode;
-      }
-    }
-  } catch (_) {}
-  return false;
-}
-
 export default function HomePage() {
-  const isComingSoon = getInitialComingSoon();
-  return <HomePageView initialComingSoon={isComingSoon} />;
+  return <HomePageView />;
 }

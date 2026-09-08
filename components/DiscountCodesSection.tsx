@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getInitialDeals, isDealActive, DiscountCode, STORAGE_KEYS } from '../data/store';
+import {
+  getInitialDeals,
+  isDealActive,
+  DiscountCode,
+  STORAGE_KEYS,
+  getDeletedDealIds,
+  markDealDeleted,
+} from '../data/store';
 
 interface DiscountCodesSectionProps {
   placement?: 'homepage' | 'dealsPage' | 'all';
@@ -12,17 +19,47 @@ export default function DiscountCodesSection({ placement = 'all' }: DiscountCode
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const loadDeals = () => {
-    const local = getInitialDeals();
+  const loadDeals = async () => {
+    const deleted = getDeletedDealIds();
+    const local = getInitialDeals().filter((d) => !deleted.has(d.id));
     setDeals(local);
 
+    // 1. Query live Firestore first (cross-device cloud sync)
+    try {
+      const { fetchDealsFromFirestore } = await import('../utils/firestoreSettings');
+      const fsResult = await fetchDealsFromFirestore();
+      if (fsResult && typeof fsResult === 'object') {
+        if (Array.isArray(fsResult.deletedIds)) {
+          fsResult.deletedIds.forEach((id) => {
+            deleted.add(id);
+            markDealDeleted(id);
+          });
+        }
+        if (Array.isArray(fsResult.deals)) {
+          const validFsDeals = fsResult.deals.filter((d) => !deleted.has(d.id));
+          setDeals(validFsDeals);
+          try {
+            localStorage.setItem(STORAGE_KEYS.DEALS, JSON.stringify(validFsDeals));
+          } catch (_) {}
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback to API / static JSON without destructive overwriting
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const endpoint = isLocal ? `/api/deals/?t=${Date.now()}` : `/data/deals.json?t=${Date.now()}`;
     fetch(endpoint, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (Array.isArray(data)) {
-          setDeals(data);
+        if (Array.isArray(data) && data.length > 0) {
+          const freshDeleted = getDeletedDealIds();
+          const nonDeleted = data.filter((d: DiscountCode) => !freshDeleted.has(d.id));
+          setDeals((prev) => {
+            const currentIds = new Set(prev.map((d: DiscountCode) => d.id));
+            const newFromStatic = nonDeleted.filter((d) => !currentIds.has(d.id));
+            return [...prev, ...newFromStatic];
+          });
         }
       })
       .catch(() => {});

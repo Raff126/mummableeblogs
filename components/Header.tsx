@@ -4,48 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PRIMARY_NAV, SOCIAL_LINKS } from '../data/nav';
-import { getInitialSettings, STORAGE_KEYS } from '../data/store';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isComingSoon, setIsComingSoon] = useState<boolean>(true);
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('comingsoon') === 'true') {
-        setIsComingSoon(true);
-        return;
-      }
-      if (isLocal || urlParams.get('preview') === 'true') {
-        setIsComingSoon(false);
-        return;
-      }
-    }
-
-    const s = getInitialSettings();
-    if (typeof s.comingSoonMode === 'boolean') {
-      setIsComingSoon(s.comingSoonMode);
-    }
-    const handleUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail?.key === STORAGE_KEYS.SETTINGS) {
-        setIsComingSoon(customEvent.detail?.data?.comingSoonMode !== false);
-      }
-    };
-    window.addEventListener('mummabee_content_updated', handleUpdate);
-    return () => window.removeEventListener('mummabee_content_updated', handleUpdate);
-  }, []);
-
   if (pathname?.startsWith('/admin') || pathname === '/coming-soon') {
-    return null;
-  }
-
-  if (isComingSoon) {
     return null;
   }
 
@@ -81,9 +47,9 @@ export default function Header() {
       </div>
 
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full p-0.5 bg-[#F8EDEF] border border-[#B75B70]/30 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform overflow-hidden">
             <img
               src="/images/mama-logo.png"
@@ -102,14 +68,14 @@ export default function Header() {
         </Link>
 
         {/* Desktop Navigation Links: Primary Nav Items */}
-        <nav className="hidden lg:flex items-center space-x-3 xl:space-x-4.5">
+        <nav className="hidden lg:flex items-center space-x-2 xl:space-x-3 2xl:space-x-4 shrink">
           {PRIMARY_NAV.map((item) => {
             const isActive = pathname === item.path;
             return (
               <Link
                 key={item.path}
                 href={item.path}
-                className={`text-[11px] xl:text-xs font-bold tracking-wide transition-colors py-1 relative whitespace-nowrap ${
+                className={`text-[10.5px] xl:text-[11.5px] 2xl:text-xs font-bold tracking-tight xl:tracking-wide transition-colors py-1 relative whitespace-nowrap ${
                   isActive ? 'text-[#683846]' : 'text-[#332D2F] hover:text-[#B75B70]'
                 }`}
               >

@@ -4,10 +4,17 @@ import path from 'path';
 import { DEFAULT_ABOUT, AboutPageContent } from '../../../data/store';
 
 const FILE_PATH = path.join(process.cwd(), 'data', 'about.json');
+const PUBLIC_FILE_PATH = path.join(process.cwd(), 'public', 'data', 'about.json');
 
 function readFromFile(): AboutPageContent {
   try {
-    if (fs.existsSync(FILE_PATH)) {
+    if (fs.existsSync(PUBLIC_FILE_PATH)) {
+      const data = fs.readFileSync(PUBLIC_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 2) {
+        return { ...DEFAULT_ABOUT, ...parsed };
+      }
+    } else if (fs.existsSync(FILE_PATH)) {
       const data = fs.readFileSync(FILE_PATH, 'utf-8');
       const parsed = JSON.parse(data);
       if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 2) {
@@ -15,7 +22,7 @@ function readFromFile(): AboutPageContent {
       }
     }
   } catch (error) {
-    console.error('Error reading data/about.json:', error);
+    console.error('Error reading about.json:', error);
   }
   return DEFAULT_ABOUT;
 }
@@ -27,9 +34,16 @@ function writeToFile(content: AboutPageContent): boolean {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(FILE_PATH, JSON.stringify(content, null, 2), 'utf-8');
+
+    const publicDir = path.dirname(PUBLIC_FILE_PATH);
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    fs.writeFileSync(PUBLIC_FILE_PATH, JSON.stringify(content, null, 2), 'utf-8');
+
     return true;
   } catch (error) {
-    console.error('Error writing data/about.json:', error);
+    console.error('Error writing about.json:', error);
     return false;
   }
 }

@@ -8,6 +8,7 @@ import {
   saveMedia,
   InstagramPost,
   MediaItem,
+  STORAGE_KEYS,
 } from '../../../data/store';
 import { compressImage } from '../../../utils/imageCompressor';
 import ImageInputWithPaste from '../../../components/admin/ImageInputWithPaste';
@@ -38,6 +39,20 @@ export default function AdminInstagramPage() {
   useEffect(() => {
     setPosts(getInitialInstagramPosts());
     setMediaList(getInitialMedia());
+
+    // Load from Firestore for cross-device cloud sync
+    (async () => {
+      try {
+        const { fetchInstagramFromFirestore } = await import('../../../utils/firestoreSettings');
+        const fsPosts = await fetchInstagramFromFirestore();
+        if (Array.isArray(fsPosts) && fsPosts.length > 0) {
+          setPosts(fsPosts);
+          try {
+            localStorage.setItem(STORAGE_KEYS.INSTAGRAM, JSON.stringify(fsPosts));
+          } catch (_) {}
+        }
+      } catch (_) {}
+    })();
   }, []);
 
   const isValidInstagramUrl = (input: string) => {

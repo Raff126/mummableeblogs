@@ -9,10 +9,12 @@ const LOCATIONS = [
 
 const TOPICS = [
   { label: 'UAE With Kids', path: '/uae-with-kids' },
-  { label: 'Family Life & Parenting', path: '/family-life' },
-  { label: 'Food & Family Dining', path: '/food' },
-  { label: 'Family Travel & Stays', path: '/travel' },
+  { label: 'Family Life', path: '/family-life' },
+  { label: 'Food & Dining', path: '/food' },
+  { label: 'Family Travel', path: '/travel' },
+  { label: 'School & Activities', path: '/school-and-activities' },
   { label: 'Brands We Love', path: '/brands-we-love' },
+  { label: 'The Expat Edit', path: '/the-expat-edit' },
   { label: 'UAE Deals', path: '/uae-deals' },
 ];
 

@@ -271,13 +271,13 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
       />
 
       {/* Outer Atmosphere Canvas: Desert Blush */}
-      <div className="bg-[#F8EDEF] min-h-screen py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="bg-[#F8EDEF] min-h-screen py-5 sm:py-12 px-3 sm:px-6 lg:px-8 overflow-x-hidden">
         {/* Main Article Reading Container: Clean White Reading Canvas */}
-        <article className="max-w-4xl mx-auto bg-white rounded-3xl sm:rounded-[36px] shadow-sm border border-gray-100 overflow-hidden p-6 sm:p-10 lg:p-14 space-y-10">
+        <article className="max-w-4xl mx-auto bg-white rounded-2xl sm:rounded-[36px] shadow-sm border border-gray-100 overflow-hidden p-4 sm:p-10 lg:p-14 space-y-8 sm:space-y-10 min-w-0 w-full">
           {/* Article Header */}
-          <header className="space-y-4 pb-6 border-b border-gray-100">
+          <header className="space-y-4 pb-6 border-b border-gray-100 min-w-0">
             {/* Breadcrumb Navigation */}
-            <nav aria-label="Breadcrumb" className="text-xs font-medium text-[#332D2F] space-x-2">
+            <nav aria-label="Breadcrumb" className="text-xs font-medium text-[#332D2F] space-x-2 break-words">
               <Link href="/" className="text-[#332D2F] hover:text-[#B75B70] transition-colors">Home</Link>
               <span>›</span>
               <Link href={`/${article.category}`} className="text-[#332D2F] hover:text-[#B75B70] transition-colors">{categoryInfo.name}</Link>
@@ -291,18 +291,18 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
             </span>
 
             {/* Article Title: Date Burgundy */}
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#683846] leading-[1.15] tracking-tight">
+            <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-bold text-[#683846] leading-[1.15] tracking-tight break-words [overflow-wrap:anywhere]">
               {article.title}
             </h1>
 
             {/* Excerpt / Lead Paragraph: Charcoal */}
-            <p className="font-sans text-base sm:text-lg text-[#332D2F] leading-relaxed">
+            <p className="font-sans text-sm sm:text-lg text-[#332D2F] leading-relaxed break-words [overflow-wrap:anywhere]">
               {article.excerpt}
             </p>
 
             {/* Author Byline & Metadata */}
             <div className="pt-4 flex items-center gap-3.5 text-xs text-[#332D2F] border-t border-gray-100">
-              <div className="w-9 h-9 rounded-full bg-[#F8EDEF] border border-[#B75B70]/40 flex items-center justify-center overflow-hidden p-0.5 shadow-2xs">
+              <div className="w-9 h-9 rounded-full bg-[#F8EDEF] border border-[#B75B70]/40 flex items-center justify-center overflow-hidden p-0.5 shadow-2xs shrink-0">
                 <img
                   src="/images/mama-logo.png"
                   alt="Donne - MummaBeeBlog"
@@ -311,9 +311,9 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
                   className="w-full h-full object-contain rounded-full"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="font-bold text-[#683846] block text-sm">By {article.author}</span>
-                <span className="font-medium text-[#332D2F]/80">
+                <span className="font-medium text-[#332D2F]/80 block truncate">
                   Published {article.publishedAt} • {article.readTime}
                   {article.location && <span> • 📍 {article.location}</span>}
                 </span>
@@ -340,22 +340,22 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
               </div>
             </div>
             {article.imageCaption && (
-              <p className="text-center text-xs text-[#332D2F]/80 italic pt-1">
+              <p className="text-center text-xs text-[#332D2F]/80 italic pt-1 break-words">
                 {article.imageCaption}
               </p>
             )}
           </div>
 
           {/* Main Content Area */}
-          <div className="space-y-8 max-w-3xl mx-auto">
+          <div className="space-y-6 sm:space-y-8 max-w-3xl mx-auto w-full min-w-0">
             {/* Quick Answer / Executive Summary Box */}
             {(article.answerSummary || article.quickAnswer) && (
-              <div className="bg-[#F8EDEF] p-6 sm:p-8 rounded-3xl border-2 border-[#B75B70] space-y-2.5 shadow-soft">
+              <div className="bg-[#F8EDEF] p-4 sm:p-7 rounded-2xl sm:rounded-3xl border-2 border-[#B75B70] space-y-2.5 shadow-soft overflow-hidden min-w-0 max-w-full">
                 <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-[#683846] uppercase">
                   <span className="text-[#B75B70] text-sm">⚡</span>
                   <span>QUICK ANSWER / EXECUTIVE SUMMARY</span>
                 </div>
-                <p className="text-base font-medium text-[#332D2F] leading-relaxed">
+                <p className="text-sm sm:text-base font-medium text-[#332D2F] leading-relaxed break-long-words">
                   {article.answerSummary || article.quickAnswer}
                 </p>
               </div>
@@ -374,33 +374,33 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
               if (!hasFacts) return null;
 
               return (
-                <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-[#D7BB91] shadow-soft space-y-4">
-                  <h3 className="font-serif text-xl font-bold text-[#683846] flex items-center gap-2">
+                <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border-2 border-[#D7BB91] shadow-soft space-y-4 overflow-hidden min-w-0 max-w-full">
+                  <h3 className="font-serif text-lg sm:text-xl font-bold text-[#683846] flex items-center gap-2">
                     <span>📌</span> GOOD TO KNOW
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm min-w-0">
                     {article.quickFacts.location && (
-                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">📍 Location</span>
-                        <span className="text-[#332D2F] font-medium">{article.quickFacts.location}</span>
+                      <div className="bg-[#F8EDEF]/50 p-3.5 rounded-xl border border-gray-100 min-w-0 overflow-hidden">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-1">📍 Location</span>
+                        <span className="text-[#332D2F] font-medium block break-long-words leading-snug">{article.quickFacts.location}</span>
                       </div>
                     )}
                     {article.quickFacts.bestFor && (
-                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">👧 Best For</span>
-                        <span className="text-[#332D2F] font-medium">{article.quickFacts.bestFor}</span>
+                      <div className="bg-[#F8EDEF]/50 p-3.5 rounded-xl border border-gray-100 min-w-0 overflow-hidden">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-1">👧 Best For</span>
+                        <span className="text-[#332D2F] font-medium block break-long-words leading-snug">{article.quickFacts.bestFor}</span>
                       </div>
                     )}
                     {article.quickFacts.budget && (
-                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">💰 Budget</span>
-                        <span className="text-[#332D2F] font-medium">{article.quickFacts.budget}</span>
+                      <div className="bg-[#F8EDEF]/50 p-3.5 rounded-xl border border-gray-100 min-w-0 overflow-hidden">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-1">💰 Budget</span>
+                        <span className="text-[#332D2F] font-medium block break-long-words leading-snug">{article.quickFacts.budget}</span>
                       </div>
                     )}
                     {article.quickFacts.timeNeeded && (
-                      <div className="bg-[#F8EDEF]/50 p-3 rounded-xl border border-gray-100">
-                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-0.5">⏱️ Time Needed</span>
-                        <span className="text-[#332D2F] font-medium">{article.quickFacts.timeNeeded}</span>
+                      <div className="bg-[#F8EDEF]/50 p-3.5 rounded-xl border border-gray-100 min-w-0 overflow-hidden">
+                        <span className="font-bold text-[#683846] block text-xs uppercase tracking-wider mb-1">⏱️ Time Needed</span>
+                        <span className="text-[#332D2F] font-medium block break-long-words leading-snug">{article.quickFacts.timeNeeded}</span>
                       </div>
                     )}
                   </div>
@@ -410,7 +410,7 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
 
             {/* Mumma Bee Tip Box */}
             {article.mummaBeeTip && (
-              <div className="bg-[#F8EDEF] border-l-4 border-[#B75B70] p-6 rounded-r-2xl text-sm sm:text-base text-[#332D2F] leading-relaxed shadow-2xs">
+              <div className="bg-[#F8EDEF] border-l-4 border-[#B75B70] p-4 sm:p-6 rounded-r-2xl text-sm sm:text-base text-[#332D2F] leading-relaxed shadow-2xs break-long-words overflow-hidden min-w-0 max-w-full">
                 <span className="font-bold text-[#683846] block mb-1 text-xs tracking-wider uppercase">
                   🐝 MUMMA BEE TIP
                 </span>
@@ -420,20 +420,20 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
 
             {/* Article Long-Form Body HTML with High-Contrast Prose Styling */}
             <div
-              className="article-prose pt-4"
+              className="article-prose pt-4 break-long-words overflow-x-auto min-w-0 max-w-full"
               dangerouslySetInnerHTML={{ __html: formatArticleContent(article.content) }}
             />
 
             {/* Topics / Tags */}
             {article.tags && article.tags.length > 0 && (
-              <div className="pt-8 border-t border-gray-100 flex flex-wrap items-center gap-2.5">
-                <span className="text-xs font-bold text-[#683846] uppercase tracking-wider mr-2">
+              <div className="pt-6 sm:pt-8 border-t border-gray-100 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-[#683846] uppercase tracking-wider mr-1 shrink-0">
                   TOPICS:
                 </span>
                 {article.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-xs bg-[#F8EDEF] text-[#683846] border border-[#D7BB91] hover:bg-[#B75B70] hover:text-white px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer"
+                    className="text-xs bg-[#F8EDEF] text-[#683846] border border-[#D7BB91] hover:bg-[#B75B70] hover:text-white px-3 py-1 rounded-full font-semibold transition-all cursor-pointer break-all"
                   >
                     #{tag}
                   </span>

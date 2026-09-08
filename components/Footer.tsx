@@ -1,48 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PRIMARY_NAV, SOCIAL_LINKS } from '../data/nav';
-import { getInitialSettings, STORAGE_KEYS } from '../data/store';
+import { PRIMARY_NAV, CATEGORY_HUBS, SOCIAL_LINKS } from '../data/nav';
 
 export default function Footer() {
-  const [isComingSoon, setIsComingSoon] = useState<boolean>(true);
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('comingsoon') === 'true') {
-        setIsComingSoon(true);
-        return;
-      }
-      if (isLocal || urlParams.get('preview') === 'true') {
-        setIsComingSoon(false);
-        return;
-      }
-    }
-
-    const s = getInitialSettings();
-    if (typeof s.comingSoonMode === 'boolean') {
-      setIsComingSoon(s.comingSoonMode);
-    }
-    const handleUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail?.key === STORAGE_KEYS.SETTINGS) {
-        setIsComingSoon(customEvent.detail?.data?.comingSoonMode !== false);
-      }
-    };
-    window.addEventListener('mummabee_content_updated', handleUpdate);
-    return () => window.removeEventListener('mummabee_content_updated', handleUpdate);
-  }, []);
-
   if (pathname?.startsWith('/admin') || pathname === '/coming-soon') {
-    return null;
-  }
-
-  if (isComingSoon) {
     return null;
   }
 
@@ -73,7 +38,7 @@ export default function Footer() {
           <div className="hidden lg:block">
             <h4 className="font-serif font-bold text-lg text-white mb-4">Explore Hubs</h4>
             <ul className="space-y-2.5">
-              {PRIMARY_NAV.slice(1, 8).map((item) => (
+              {CATEGORY_HUBS.map((item) => (
                 <li key={item.path}>
                   <Link
                     href={item.path}

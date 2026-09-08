@@ -8,17 +8,40 @@ import { SOCIAL_LINKS } from '../data/nav';
 export default function HeroSection() {
   const [content, setContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE);
 
-  const loadLatest = () => {
+  const loadLatest = async () => {
     const local = getInitialHomepage();
     setContent(local);
+
+    // 1. Query live Firestore first (cross-device cloud sync)
+    try {
+      const { fetchHomepageFromFirestore } = await import('../utils/firestoreSettings');
+      const fsData = await fetchHomepageFromFirestore();
+      if (fsData && typeof fsData === 'object' && (fsData.heroHeadline || fsData.heroImage)) {
+        setContent((prev) => {
+          if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
+            return prev;
+          }
+          const merged = { ...prev, ...fsData };
+          try {
+            localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(merged));
+          } catch (_) {}
+          return merged;
+        });
+        return;
+      }
+    } catch (_) {}
+
+    // 2. Fallback to API / static JSON without destructive overwriting
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
     fetch(endpoint, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data === 'object' && data.heroHeadline) {
-          try { localStorage.setItem('mummabee_homepage', JSON.stringify(data)); } catch (_) {}
-          setContent((prev) => ({ ...prev, ...data }));
+          setContent((prev) => {
+            // Keep local modifications prioritized over stale build-time static JSON
+            return { ...data, ...prev };
+          });
         }
       })
       .catch(() => {});

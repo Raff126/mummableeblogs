@@ -12,6 +12,35 @@ import {
   seedFirestoreIfEmpty,
   FirestoreArticle,
 } from '../utils/firestoreArticles';
+import {
+  saveHomepageToFirestore,
+  fetchHomepageFromFirestore,
+  saveAboutToFirestore,
+  fetchAboutFromFirestore,
+  saveDealsToFirestore,
+  fetchDealsFromFirestore,
+  saveInstagramToFirestore,
+  fetchInstagramFromFirestore,
+  saveWorkWithUsToFirestore,
+  fetchWorkWithUsFromFirestore,
+  saveSettingsToFirestore,
+  fetchSettingsFromFirestore,
+} from '../utils/firestoreSettings';
+
+export {
+  saveHomepageToFirestore,
+  fetchHomepageFromFirestore,
+  saveAboutToFirestore,
+  fetchAboutFromFirestore,
+  saveDealsToFirestore,
+  fetchDealsFromFirestore,
+  saveInstagramToFirestore,
+  fetchInstagramFromFirestore,
+  saveWorkWithUsToFirestore,
+  fetchWorkWithUsFromFirestore,
+  saveSettingsToFirestore,
+  fetchSettingsFromFirestore,
+};
 
 export type { Article };
 
@@ -89,6 +118,7 @@ export interface HomepageContent {
   donneImage: string;
   newsletterHeadline: string;
   newsletterSubtext: string;
+  updatedAt?: string;
 }
 
 export interface AboutPageContent {
@@ -104,6 +134,7 @@ export interface AboutPageContent {
   pillar2Title: string;
   pillar2Text: string;
   privacyNote: string;
+  updatedAt?: string;
 }
 
 export interface WorkWithUsPageContent {
@@ -138,6 +169,7 @@ export const STORAGE_KEYS = {
   INQUIRIES: 'mummabee_inquiries',
   SUBSCRIBERS: 'mummabee_subscribers',
   DEALS: 'mummabee_deals',
+  DELETED_DEALS: 'mummabee_deleted_deals',
   MEDIA: 'mummabee_media',
   SETTINGS: 'mummabee_settings',
   HOMEPAGE: 'mummabee_homepage',
@@ -659,8 +691,21 @@ export function getInitialInstagramPosts(): InstagramPost[] {
   }
 }
 
-export function saveInstagramPosts(posts: InstagramPost[]): void {
+export async function saveInstagramPosts(posts: InstagramPost[]): Promise<boolean> {
   safeSetLocalStorage(STORAGE_KEYS.INSTAGRAM, JSON.stringify(posts));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('mummabee_content_updated', {
+        detail: { key: STORAGE_KEYS.INSTAGRAM, data: posts },
+      })
+    );
+    try {
+      await saveInstagramToFirestore(posts);
+    } catch (e) {
+      console.warn('Could not sync instagram with Firestore:', e);
+    }
+  }
+  return true;
 }
 
 export function getInitialInquiries(): Inquiry[] {
@@ -707,32 +752,76 @@ export async function saveSubscribers(subscribers: Subscriber[]): Promise<boolea
   return true;
 }
 
+export function getDeletedDealIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DELETED_DEALS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return new Set(parsed);
+    }
+  } catch (_) {}
+  return new Set();
+}
+
+export function markDealDeleted(id: string): void {
+  if (typeof window === 'undefined') return;
+  const set = getDeletedDealIds();
+  set.add(id);
+  safeSetLocalStorage(STORAGE_KEYS.DELETED_DEALS, JSON.stringify(Array.from(set)));
+}
+
 export function getInitialDeals(): DiscountCode[] {
   if (typeof window === 'undefined') return DEFAULT_DEALS;
+  const deleted = getDeletedDealIds();
   const saved = localStorage.getItem(STORAGE_KEYS.DEALS);
   try {
-    return saved ? JSON.parse(saved) : DEFAULT_DEALS;
+    const parsed = saved ? JSON.parse(saved) : DEFAULT_DEALS;
+    return Array.isArray(parsed)
+      ? parsed.filter((d: DiscountCode) => !deleted.has(d.id))
+      : DEFAULT_DEALS.filter((d: DiscountCode) => !deleted.has(d.id));
   } catch (e) {
-    return DEFAULT_DEALS;
+    return DEFAULT_DEALS.filter((d: DiscountCode) => !deleted.has(d.id));
   }
 }
 
-export async function saveDeals(deals: DiscountCode[]): Promise<boolean> {
-  safeSetLocalStorage(STORAGE_KEYS.DEALS, JSON.stringify(deals));
+export async function saveDeals(deals: DiscountCode[], deletedId?: string | string[]): Promise<boolean> {
+  if (deletedId) {
+    if (Array.isArray(deletedId)) {
+      deletedId.forEach((id) => markDealDeleted(id));
+    } else {
+      markDealDeleted(deletedId);
+    }
+  }
+  const deleted = getDeletedDealIds();
+  const filtered = deals.filter((d) => !deleted.has(d.id));
+
+  safeSetLocalStorage(STORAGE_KEYS.DEALS, JSON.stringify(filtered));
   if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('mummabee_content_updated', {
+        detail: { key: STORAGE_KEYS.DEALS, data: filtered },
+      })
+    );
+
+    try {
+      await saveDealsToFirestore(filtered, Array.from(deleted));
+    } catch (e) {
+      console.warn('Could not sync deals with Firestore:', e);
+    }
+
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocal) {
       try {
         await fetch('/api/deals/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(deals),
+          body: JSON.stringify(filtered),
         });
       } catch (e) {
         console.warn('Could not sync deals with API:', e);
       }
     }
-    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.DEALS, data: deals } }));
   }
   return true;
 }
@@ -771,14 +860,24 @@ export async function saveSettings(settings: SiteSettings): Promise<boolean> {
         detail: { key: STORAGE_KEYS.SETTINGS, data: settings },
       })
     );
+
     try {
-      await fetch('/api/settings/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      });
+      await saveSettingsToFirestore(settings);
     } catch (e) {
-      console.warn('Could not sync settings with API:', e);
+      console.warn('Could not sync settings with Firestore:', e);
+    }
+
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      try {
+        await fetch('/api/settings/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        });
+      } catch (e) {
+        console.warn('Could not sync settings with API:', e);
+      }
     }
   }
   return true;
@@ -795,16 +894,32 @@ export function getInitialHomepage(): HomepageContent {
 }
 
 export async function saveHomepage(hp: HomepageContent): Promise<boolean> {
-  safeSetLocalStorage(STORAGE_KEYS.HOMEPAGE, JSON.stringify(hp));
+  const withTime: HomepageContent = {
+    ...hp,
+    updatedAt: hp.updatedAt || new Date().toISOString(),
+  };
+  safeSetLocalStorage(STORAGE_KEYS.HOMEPAGE, JSON.stringify(withTime));
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.HOMEPAGE, data: hp } }));
+    window.dispatchEvent(
+      new CustomEvent('mummabee_content_updated', {
+        detail: { key: STORAGE_KEYS.HOMEPAGE, data: withTime },
+      })
+    );
+
+    // Save to Firestore so it syncs across all devices & live production visitors
+    try {
+      await saveHomepageToFirestore(withTime);
+    } catch (fsErr) {
+      console.warn('Firestore homepage save error:', fsErr);
+    }
+
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocal) {
       try {
         await fetch('/api/homepage/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(hp),
+          body: JSON.stringify(withTime),
         });
       } catch (e) {
         console.warn('Could not sync homepage with API:', e);
@@ -825,16 +940,32 @@ export function getInitialAbout(): AboutPageContent {
 }
 
 export async function saveAbout(about: AboutPageContent): Promise<boolean> {
-  safeSetLocalStorage(STORAGE_KEYS.ABOUT, JSON.stringify(about));
+  const withTime: AboutPageContent = {
+    ...about,
+    updatedAt: about.updatedAt || new Date().toISOString(),
+  };
+  safeSetLocalStorage(STORAGE_KEYS.ABOUT, JSON.stringify(withTime));
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.ABOUT, data: about } }));
+    window.dispatchEvent(
+      new CustomEvent('mummabee_content_updated', {
+        detail: { key: STORAGE_KEYS.ABOUT, data: withTime },
+      })
+    );
+
+    // Save to Firestore so it syncs across all devices & live production visitors
+    try {
+      await saveAboutToFirestore(withTime);
+    } catch (fsErr) {
+      console.warn('Firestore about save error:', fsErr);
+    }
+
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocal) {
       try {
         await fetch('/api/about/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(about),
+          body: JSON.stringify(withTime),
         });
       } catch (e) {
         console.warn('Could not sync about with API:', e);
@@ -857,7 +988,18 @@ export function getInitialWorkWithUs(): WorkWithUsPageContent {
 export async function saveWorkWithUs(content: WorkWithUsPageContent): Promise<boolean> {
   safeSetLocalStorage(STORAGE_KEYS.WORK_WITH_US, JSON.stringify(content));
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.WORK_WITH_US, data: content } }));
+    window.dispatchEvent(
+      new CustomEvent('mummabee_content_updated', {
+        detail: { key: STORAGE_KEYS.WORK_WITH_US, data: content },
+      })
+    );
+
+    try {
+      await saveWorkWithUsToFirestore(content);
+    } catch (e) {
+      console.warn('Could not sync work-with-us with Firestore:', e);
+    }
+
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocal) {
       try {

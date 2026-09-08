@@ -11,16 +11,39 @@ export default function AdminWorkWithUsEditPage() {
 
   useEffect(() => {
     setContent(getInitialWorkWithUs());
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/work-with-us/?t=${Date.now()}` : `/data/work-with-us.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data === 'object') {
-          setContent((prev) => (prev ? { ...prev, ...data } : data));
+
+    const loadRemote = async () => {
+      // 1. Try Firestore first
+      try {
+        const { fetchWorkWithUsFromFirestore } = await import('../../../utils/firestoreSettings');
+        const fsData = await fetchWorkWithUsFromFirestore();
+        if (fsData && typeof fsData === 'object' && fsData.headline) {
+          setContent((prev) => {
+            if (!prev) return fsData;
+            return { ...prev, ...fsData };
+          });
+          return;
         }
-      })
-      .catch(() => {});
+      } catch (_) {}
+
+      // 2. Fallback to API / static JSON
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const endpoint = isLocal ? `/api/work-with-us/?t=${Date.now()}` : `/data/work-with-us.json?t=${Date.now()}`;
+      try {
+        const res = await fetch(endpoint, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object') {
+            setContent((prev) => {
+              if (!prev) return data;
+              return { ...data, ...prev };
+            });
+          }
+        }
+      } catch (_) {}
+    };
+
+    loadRemote();
   }, []);
 
   if (!content) return null;

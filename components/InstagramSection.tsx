@@ -6,9 +6,21 @@ import { getInitialInstagramPosts, InstagramPost } from '../data/store';
 export default function InstagramSection() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
 
-  const loadPosts = () => {
+  const loadPosts = async () => {
     const allPosts = getInitialInstagramPosts();
     setPosts(allPosts.filter((p) => p.visible).slice(0, 6));
+
+    // Query live Firestore for cross-device updates
+    try {
+      const { fetchInstagramFromFirestore } = await import('../utils/firestoreSettings');
+      const fsPosts = await fetchInstagramFromFirestore();
+      if (Array.isArray(fsPosts) && fsPosts.length > 0) {
+        setPosts(fsPosts.filter((p) => p.visible).slice(0, 6));
+        try {
+          localStorage.setItem('mummabee_instagram', JSON.stringify(fsPosts));
+        } catch (_) {}
+      }
+    } catch (_) {}
   };
 
   useEffect(() => {

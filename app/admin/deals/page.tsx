@@ -2,7 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getInitialDeals, saveDeals, isDealActive, DiscountCode, STORAGE_KEYS } from '../../../data/store';
+import {
+  getInitialDeals,
+  saveDeals,
+  isDealActive,
+  DiscountCode,
+  STORAGE_KEYS,
+  markDealDeleted,
+  getDeletedDealIds,
+} from '../../../data/store';
 
 export default function AdminDealsPage() {
   const [deals, setDeals] = useState<DiscountCode[]>([]);
@@ -22,16 +30,47 @@ export default function AdminDealsPage() {
   const [showOnHomepage, setShowOnHomepage] = useState(true);
   const [showOnDealsPage, setShowOnDealsPage] = useState(true);
 
-  const loadLatest = () => {
-    const local = getInitialDeals();
+  const loadLatest = async () => {
+    const deleted = getDeletedDealIds();
+    const local = getInitialDeals().filter((d) => !deleted.has(d.id));
     setDeals(local);
+
+    // 1. Query live Firestore first (cross-device cloud sync)
+    try {
+      const { fetchDealsFromFirestore } = await import('../../../utils/firestoreSettings');
+      const fsResult = await fetchDealsFromFirestore();
+      if (fsResult && typeof fsResult === 'object') {
+        if (Array.isArray(fsResult.deletedIds)) {
+          fsResult.deletedIds.forEach((id) => {
+            deleted.add(id);
+            markDealDeleted(id);
+          });
+        }
+        if (Array.isArray(fsResult.deals)) {
+          const validFsDeals = fsResult.deals.filter((d) => !deleted.has(d.id));
+          setDeals(validFsDeals);
+          try {
+            localStorage.setItem(STORAGE_KEYS.DEALS, JSON.stringify(validFsDeals));
+          } catch (_) {}
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback to API / static JSON without destructive overwriting
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const endpoint = isLocal ? `/api/deals/?t=${Date.now()}` : `/data/deals.json?t=${Date.now()}`;
     fetch(endpoint, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (Array.isArray(data)) {
-          setDeals(data);
+        if (Array.isArray(data) && data.length > 0) {
+          const freshDeleted = getDeletedDealIds();
+          const nonDeleted = data.filter((d: DiscountCode) => !freshDeleted.has(d.id));
+          setDeals((prev) => {
+            const currentIds = new Set(prev.map((d: DiscountCode) => d.id));
+            const newFromStatic = nonDeleted.filter((d) => !currentIds.has(d.id));
+            return [...prev, ...newFromStatic];
+          });
         }
       })
       .catch((err) => console.error('Error loading deals:', err));
@@ -138,9 +177,10 @@ export default function AdminDealsPage() {
 
   const handleDelete = async (id: string, dealTitle: string) => {
     if (window.confirm(`Are you sure you want to delete the deal "${dealTitle}"?`)) {
+      markDealDeleted(id);
       const updated = deals.filter((d) => d.id !== id);
       setDeals(updated);
-      await saveDeals(updated);
+      await saveDeals(updated, id);
       setMessage(`"${dealTitle}" deleted.`);
       setTimeout(() => setMessage(''), 3000);
     }
@@ -156,8 +196,11 @@ export default function AdminDealsPage() {
     }
 
     if (window.confirm(`Are you sure you want to permanently delete ${expiredCount} expired discount code(s)?`)) {
+      const expired = deals.filter((d) => !isDealActive(d));
+      const expiredIds = expired.map((d) => d.id);
+      expiredIds.forEach((id) => markDealDeleted(id));
       setDeals(activeOnly);
-      await saveDeals(activeOnly);
+      await saveDeals(activeOnly, expiredIds);
       setMessage(`Cleaned ${expiredCount} expired code(s) successfully.`);
       setTimeout(() => setMessage(''), 3000);
     }
