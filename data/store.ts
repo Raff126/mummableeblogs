@@ -487,11 +487,20 @@ export async function deleteArticle(id: string, slug?: string): Promise<boolean>
 
 export async function saveArticles(articles: Article[]): Promise<boolean> {
   if (typeof window !== 'undefined') {
-    // 1. Strictly synchronize isDraft and status across all articles
+    // 1. Strictly synchronize isDraft and status, and sanitize slug length across all articles
     const normalizedArticles = articles.map((a) => {
       const isDraft = Boolean(a.isDraft ?? (a.status === 'draft'));
+      const rawSlug = a.slug || a.id;
+      const cleanSlug = rawSlug
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+        .slice(0, 80)
+        .replace(/-+$/, '');
+
       return {
         ...a,
+        slug: cleanSlug || a.id,
         isDraft,
         status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
         showGoodToKnow: a.showGoodToKnow ?? true,
@@ -537,8 +546,17 @@ export async function saveArticles(articles: Article[]): Promise<boolean> {
 export async function saveOneArticle(article: Article): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   const isDraft = Boolean(article.isDraft ?? (article.status === 'draft'));
+  const rawSlug = article.slug || article.id;
+  const cleanSlug = rawSlug
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 80)
+    .replace(/-+$/, '');
+
   const normalized: Article = {
     ...article,
+    slug: cleanSlug || article.id,
     isDraft,
     status: isDraft ? 'draft' : 'published',
     showGoodToKnow: article.showGoodToKnow ?? true,

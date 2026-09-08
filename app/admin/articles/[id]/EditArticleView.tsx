@@ -221,13 +221,22 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
 
       const targetArticle = articleIndex !== -1 ? allArticles[articleIndex] : (article || getAllArticles().find(a => a.id === articleId || a.slug === articleId));
 
+      const cleanTitle = title.split('\n')[0].trim().slice(0, 180) || title.trim();
+      const rawSlug = slug.trim() || targetArticle?.slug || cleanTitle || articleId;
+      const cleanSlug = rawSlug
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+        .slice(0, 80)
+        .replace(/-+$/, '') || articleId;
+
       const updatedArticle: ArticleItem = {
         ...(targetArticle || {}),
         id: targetArticle?.id || articleId,
         author: targetArticle?.author || 'Donne',
         publishedAt: targetArticle?.publishedAt || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        title: title.trim(),
-        slug: slug.trim() || targetArticle?.slug || articleId,
+        title: cleanTitle || title.trim().slice(0, 180),
+        slug: cleanSlug,
         category,
         excerpt: excerpt.trim(),
         content: content.trim() || `<p>${excerpt.trim()}</p>`,
@@ -351,6 +360,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
             <input
               type="text"
               value={title}
+              maxLength={200}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-sm font-serif font-bold text-[#683846]"
             />
@@ -364,6 +374,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
               <input
                 type="text"
                 value={slug}
+                maxLength={80}
                 onChange={(e) => setSlug(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-xs text-[#332D2F]"
               />

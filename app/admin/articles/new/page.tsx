@@ -173,14 +173,19 @@ export default function AdminNewArticlePage() {
         // Fallback to local articles
       }
 
-      const slugBase = title
+      // Clean title if multi-line or excessively long
+      const cleanTitle = title.split('\n')[0].trim().slice(0, 180) || title.trim();
+
+      const slugBase = cleanTitle
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
+        .replace(/(^-|-$)/g, '')
+        .slice(0, 80)
+        .replace(/-+$/, '');
 
       let slug = slugBase || `post-${Date.now()}`;
       if (currentArticles.some((a) => a.slug === slug)) {
-        slug = `${slug}-${Date.now().toString().slice(-4)}`;
+        slug = `${slug.slice(0, 70)}-${Date.now().toString().slice(-4)}`;
       }
 
       // Compute realistic read time based on word count
@@ -190,7 +195,7 @@ export default function AdminNewArticlePage() {
       const newArticle: Article = {
         id: `art-${Date.now()}`,
         slug,
-        title: title.trim(),
+        title: cleanTitle || title.trim().slice(0, 180),
         category,
         excerpt: finalExcerpt,
         content: content.trim() || `<p>${finalExcerpt}</p>`,
@@ -308,6 +313,7 @@ export default function AdminNewArticlePage() {
             type="text"
             placeholder="e.g. 5 Fun Weekend Spots in Abu Dhabi We Loved"
             value={title}
+            maxLength={200}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#B75B70] text-base font-serif font-bold text-[#683846]"
           />

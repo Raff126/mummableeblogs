@@ -87,9 +87,18 @@ export async function fetchArticlesFromFirestore(): Promise<FirestoreArticle[]> 
       snapshot.forEach((docSnap) => {
         const data = docSnap.data() as FirestoreArticle;
         const isDraft = Boolean(data.isDraft ?? (data.status === 'draft'));
+        const rawSlug = data.slug || data.id || docSnap.id;
+        const cleanSlug = rawSlug
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+          .slice(0, 80)
+          .replace(/-+$/, '');
+
         articles.push({
           ...data,
           id: data.id || docSnap.id,
+          slug: cleanSlug || docSnap.id,
           isDraft,
           status: isDraft ? 'draft' : 'published',
         });
@@ -115,8 +124,17 @@ export async function saveOneArticleToFirestore(article: FirestoreArticle): Prom
     try {
       const docRef = doc(db, ARTICLES_COLLECTION, article.id);
       const isDraft = Boolean(article.isDraft ?? (article.status === 'draft'));
+      const rawSlug = article.slug || article.id;
+      const cleanSlug = rawSlug
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+        .slice(0, 80)
+        .replace(/-+$/, '');
+
       const toSave = {
         ...article,
+        slug: cleanSlug || article.id,
         isDraft,
         status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
       };
