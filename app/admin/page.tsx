@@ -16,6 +16,7 @@ import { CATEGORIES } from '../../data/categories';
 export default function AdminDashboardPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [search, setSearch] = useState('');
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   const loadArticles = async () => {
@@ -33,19 +34,29 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     loadArticles();
-    const handleUpdate = () => loadArticles();
-    window.addEventListener('mummabee_content_updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    window.addEventListener('focus', handleUpdate);
-    return () => {
-      window.removeEventListener('mummabee_content_updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-      window.removeEventListener('focus', handleUpdate);
+    const handleLocalUpdate = () => {
+      setArticles(getInitialArticles());
     };
-  }, []);
+    window.addEventListener('mummabee_content_updated', handleLocalUpdate);
+    window.addEventListener('storage', handleLocalUpdate);
+    const handleFocus = () => {
+      if (!togglingId) {
+        loadArticles();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('mummabee_content_updated', handleLocalUpdate);
+      window.removeEventListener('storage', handleLocalUpdate);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [togglingId]);
 
   const handleTogglePublish = async (id: string) => {
+    if (togglingId) return; // Prevent double-clicks
+    setTogglingId(id);
     let toggledArticle: Article | null = null;
+    const nowIso = new Date().toISOString();
     const updated = articles.map((a) => {
       if (a.id === id) {
         const nextDraft = !a.isDraft;
@@ -53,6 +64,7 @@ export default function AdminDashboardPage() {
           ...a,
           isDraft: nextDraft,
           status: nextDraft ? 'draft' : 'published',
+          lastUpdated: nowIso,
         };
         toggledArticle = modified;
         return modified;
@@ -60,13 +72,21 @@ export default function AdminDashboardPage() {
       return a;
     });
     setArticles(updated);
-    if (toggledArticle) {
-      await saveOneArticle(toggledArticle);
-    } else {
-      await saveArticles(updated);
+    try {
+      if (toggledArticle) {
+        await saveOneArticle(toggledArticle);
+      } else {
+        await saveArticles(updated);
+      }
+      const finalStatus = toggledArticle ? ((toggledArticle as Article).isDraft ? 'Unpublished (Draft)' : 'Published (Live)') : 'Updated';
+      setMessage(`Article status updated to ${finalStatus}.`);
+    } catch (err) {
+      console.error('Failed to toggle publish status in dashboard:', err);
+      setMessage('Notice: Status saved locally, syncing with cloud in progress.');
+    } finally {
+      setTogglingId(null);
+      setTimeout(() => setMessage(''), 3500);
     }
-    setMessage('Article status updated successfully.');
-    setTimeout(() => setMessage(''), 3000);
   };
 
   const handleDelete = async (id: string) => {
@@ -182,10 +202,16 @@ export default function AdminDashboardPage() {
                       Edit Post
                     </Link>
                     <button
+                      type="button"
+                      disabled={togglingId === art.id}
                       onClick={() => handleTogglePublish(art.id)}
-                      className="px-3 py-1.5 rounded-xl border border-[#B75B70]/30 text-xs font-semibold text-[#B75B70] hover:bg-[#F8EDEF]"
+                      className={`px-3 py-1.5 rounded-xl border border-[#B75B70]/30 text-xs font-semibold transition-all ${
+                        togglingId === art.id
+                          ? 'opacity-60 cursor-wait bg-gray-100 text-gray-400'
+                          : 'text-[#B75B70] hover:bg-[#F8EDEF]'
+                      }`}
                     >
-                      {art.isDraft ? 'Publish' : 'Unpublish'}
+                      {togglingId === art.id ? 'Updating...' : art.isDraft ? 'Publish' : 'Unpublish'}
                     </button>
                     <button
                       onClick={() => handleDelete(art.id)}

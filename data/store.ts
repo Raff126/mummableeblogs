@@ -487,6 +487,7 @@ export async function deleteArticle(id: string, slug?: string): Promise<boolean>
 
 export async function saveArticles(articles: Article[]): Promise<boolean> {
   if (typeof window !== 'undefined') {
+    const nowIso = new Date().toISOString();
     // 1. Strictly synchronize isDraft and status, and sanitize slug length across all articles
     const normalizedArticles = articles.map((a) => {
       const isDraft = Boolean(a.isDraft ?? (a.status === 'draft'));
@@ -503,6 +504,7 @@ export async function saveArticles(articles: Article[]): Promise<boolean> {
         slug: cleanSlug || a.id,
         isDraft,
         status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
+        lastUpdated: a.lastUpdated || nowIso,
         showGoodToKnow: a.showGoodToKnow ?? true,
         goodToKnowEnabled: a.goodToKnowEnabled ?? true,
       };
@@ -554,11 +556,13 @@ export async function saveOneArticle(article: Article): Promise<boolean> {
     .slice(0, 80)
     .replace(/-+$/, '');
 
+  const nowIso = new Date().toISOString();
   const normalized: Article = {
     ...article,
     slug: cleanSlug || article.id,
     isDraft,
     status: isDraft ? 'draft' : 'published',
+    lastUpdated: article.lastUpdated || nowIso,
     showGoodToKnow: article.showGoodToKnow ?? true,
     goodToKnowEnabled: article.goodToKnowEnabled ?? true,
   };
@@ -582,9 +586,6 @@ export async function saveOneArticle(article: Article): Promise<boolean> {
   } catch (err) {
     console.warn('Firestore saveOneArticle notice:', err);
   }
-
-  // Also sync full collection in background
-  saveArticlesToFirestore(updated as FirestoreArticle[]).catch(() => {});
 
   const isLocalhost = Boolean(
     window.location.hostname === 'localhost' ||
@@ -625,32 +626,55 @@ export async function loadArticlesFromServer(): Promise<Article[]> {
         });
       } catch (_) {}
 
-      const fsMap = new Map(firestoreArticles.map((a) => [a.id, a]));
-      const fsSlugMap = new Map(firestoreArticles.filter((a) => a.slug).map((a) => [a.slug, a]));
+      const localMap = new Map<string, Article>();
+      const localSlugMap = new Map<string, Article>();
+      for (const a of localArticles) {
+        if (a.id) localMap.set(a.id, a);
+        if (a.slug) localSlugMap.set(a.slug, a);
+      }
 
-      // Start with Firestore articles (cloud is authoritative)
-      const merged: FirestoreArticle[] = [...firestoreArticles];
+      // Map to hold merged articles keyed by id
+      const mergedMap = new Map<string, FirestoreArticle>();
 
-      // CRITICAL FIX: Preserve any locally created / updated articles that aren't in Firestore yet
+      // Process Firestore articles with timestamp comparison
+      for (const fsArt of firestoreArticles) {
+        const local = localMap.get(fsArt.id) || (fsArt.slug ? localSlugMap.get(fsArt.slug) : undefined);
+        if (local) {
+          const fsTime = fsArt.lastUpdated ? new Date(fsArt.lastUpdated).getTime() : 0;
+          const localTime = local.lastUpdated ? new Date(local.lastUpdated).getTime() : 0;
+          // If local has a newer timestamp or was updated within the last 5 minutes, preserve local!
+          const isRecentLocal = localTime > 0 && (Date.now() - localTime < 300000);
+          if (localTime > fsTime || (isRecentLocal && localTime >= fsTime)) {
+            mergedMap.set(fsArt.id, local as FirestoreArticle);
+            // Asynchronously sync local to Firestore so cloud catches up
+            saveOneArticleToFirestore(local as FirestoreArticle).catch(() => {});
+            continue;
+          }
+        }
+        mergedMap.set(fsArt.id, fsArt);
+      }
+
+      // Preserve any locally created / updated articles that aren't in Firestore yet
       for (const localArt of localArticles) {
-        const inFs = fsMap.has(localArt.id) || (localArt.slug && fsSlugMap.has(localArt.slug));
-        const isDeleted = deleted.has(localArt.id) || (localArt.slug && deleted.has(localArt.slug));
-        if (!inFs && !isDeleted) {
-          merged.unshift(localArt as FirestoreArticle);
+        if (!mergedMap.has(localArt.id) && (!localArt.slug || !firestoreArticles.some((f) => f.slug === localArt.slug))) {
+          const isDeleted = deleted.has(localArt.id) || (localArt.slug && deleted.has(localArt.slug));
+          if (!isDeleted) {
+            mergedMap.set(localArt.id, localArt as FirestoreArticle);
+          }
         }
       }
 
       // Add any static JSON articles that aren't in Firestore, aren't local, and aren't deleted
-      const mergedIdSet = new Set(merged.map((a) => a.id));
-      const mergedSlugSet = new Set(merged.filter((a) => a.slug).map((a) => a.slug));
       for (const staticArt of ARTICLES) {
-        const exists = mergedIdSet.has(staticArt.id) || (staticArt.slug && mergedSlugSet.has(staticArt.slug));
-        const isDeleted = deleted.has(staticArt.id) || (staticArt.slug && deleted.has(staticArt.slug));
-        if (!exists && !isDeleted) {
-          merged.push(staticArt as FirestoreArticle);
+        if (!mergedMap.has(staticArt.id) && (!staticArt.slug || !firestoreArticles.some((f) => f.slug === staticArt.slug))) {
+          const isDeleted = deleted.has(staticArt.id) || (staticArt.slug && deleted.has(staticArt.slug));
+          if (!isDeleted) {
+            mergedMap.set(staticArt.id, staticArt as FirestoreArticle);
+          }
         }
       }
 
+      const merged = Array.from(mergedMap.values());
       const filtered = merged.filter(
         (a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))
       );

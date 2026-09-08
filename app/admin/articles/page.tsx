@@ -24,6 +24,7 @@ export default function AdminArticlesPage() {
   const [gtkFilter, setGtkFilter] = useState('ALL');
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'TITLE'>('NEWEST');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -59,17 +60,26 @@ export default function AdminArticlesPage() {
 
     window.addEventListener('mummabee_content_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
-    window.addEventListener('focus', () => loadLatestArticles());
+    
+    const handleFocus = () => {
+      if (!togglingId) {
+        loadLatestArticles();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       window.removeEventListener('mummabee_content_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
-      window.removeEventListener('focus', () => loadLatestArticles());
+      window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [togglingId]);
 
   const handleTogglePublish = async (id: string) => {
+    if (togglingId) return; // Prevent concurrent clicks
+    setTogglingId(id);
     let toggledArticle: Article | null = null;
+    const nowIso = new Date().toISOString();
     const updated = articles.map((a) => {
       if (a.id === id) {
         const nextDraft = !a.isDraft;
@@ -77,6 +87,7 @@ export default function AdminArticlesPage() {
           ...a,
           isDraft: nextDraft,
           status: nextDraft ? 'draft' : 'published',
+          lastUpdated: nowIso,
         };
         toggledArticle = modified;
         return modified;
@@ -84,13 +95,21 @@ export default function AdminArticlesPage() {
       return a;
     });
     setArticles(updated);
-    if (toggledArticle) {
-      await saveOneArticle(toggledArticle);
-    } else {
-      await saveArticles(updated);
+    try {
+      if (toggledArticle) {
+        await saveOneArticle(toggledArticle);
+      } else {
+        await saveArticles(updated);
+      }
+      const finalStatus = toggledArticle ? ((toggledArticle as Article).isDraft ? 'Unpublished (Draft)' : 'Published (Live)') : 'Updated';
+      setMessage(`Article status updated to ${finalStatus}.`);
+    } catch (err) {
+      console.error('Failed to toggle publish status:', err);
+      setMessage('Notice: Status saved locally, syncing with cloud in progress.');
+    } finally {
+      setTogglingId(null);
+      setTimeout(() => setMessage(''), 3500);
     }
-    setMessage('Article status updated successfully.');
-    setTimeout(() => setMessage(''), 3000);
   };
 
   const handleToggleGoodToKnow = (art: Article) => {
@@ -293,10 +312,16 @@ export default function AdminArticlesPage() {
                       Preview
                     </Link>
                     <button
+                      type="button"
+                      disabled={togglingId === art.id}
                       onClick={() => handleTogglePublish(art.id)}
-                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-[#B75B70] bg-[#F8EDEF] border border-[#B75B70]/20"
+                      className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                        togglingId === art.id
+                          ? 'opacity-60 cursor-wait bg-gray-100 text-gray-400 border border-gray-200'
+                          : 'text-[#B75B70] bg-[#F8EDEF] border border-[#B75B70]/20 hover:bg-[#B75B70] hover:text-white'
+                      }`}
                     >
-                      {art.isDraft ? 'Publish' : 'Unpublish'}
+                      {togglingId === art.id ? 'Updating...' : art.isDraft ? 'Publish' : 'Unpublish'}
                     </button>
                     <Link
                       href={`/admin/articles/${art.id}/`}
@@ -392,10 +417,16 @@ export default function AdminArticlesPage() {
                             Preview
                           </Link>
                           <button
+                            type="button"
+                            disabled={togglingId === art.id}
                             onClick={() => handleTogglePublish(art.id)}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#B75B70] hover:bg-[#F8EDEF]"
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                              togglingId === art.id
+                                ? 'opacity-60 cursor-wait bg-gray-100 text-gray-400'
+                                : 'text-[#B75B70] hover:bg-[#F8EDEF]'
+                            }`}
                           >
-                            {art.isDraft ? 'Publish' : 'Unpublish'}
+                            {togglingId === art.id ? 'Updating...' : art.isDraft ? 'Publish' : 'Unpublish'}
                           </button>
                           <Link
                             href={`/admin/articles/${art.id}/`}

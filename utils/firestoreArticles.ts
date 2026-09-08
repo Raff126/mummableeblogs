@@ -10,7 +10,7 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
-import { getFirebaseDb } from './firebase';
+import { getFirebaseDb, ensureFirebaseAuth } from './firebase';
 
 const ARTICLES_COLLECTION = 'articles';
 const DELETED_COLLECTION = 'deleted_articles';
@@ -101,6 +101,7 @@ export async function fetchArticlesFromFirestore(): Promise<FirestoreArticle[]> 
           slug: cleanSlug || docSnap.id,
           isDraft,
           status: isDraft ? 'draft' : 'published',
+          lastUpdated: data.lastUpdated || undefined,
         });
       });
       return articles;
@@ -110,7 +111,7 @@ export async function fetchArticlesFromFirestore(): Promise<FirestoreArticle[]> 
     }
   };
 
-  return withTimeout(fetchTask(), 4000, []);
+  return withTimeout(fetchTask(), 6000, []);
 }
 
 /**
@@ -122,7 +123,10 @@ export async function saveOneArticleToFirestore(article: FirestoreArticle): Prom
 
   const saveTask = async (): Promise<boolean> => {
     try {
-      const docRef = doc(db, ARTICLES_COLLECTION, article.id);
+      await ensureFirebaseAuth();
+      const docId = article.id || article.slug;
+      if (!docId) return false;
+      const docRef = doc(db, ARTICLES_COLLECTION, docId);
       const isDraft = Boolean(article.isDraft ?? (article.status === 'draft'));
       const rawSlug = article.slug || article.id;
       const cleanSlug = rawSlug
@@ -134,9 +138,11 @@ export async function saveOneArticleToFirestore(article: FirestoreArticle): Prom
 
       const toSave = {
         ...article,
-        slug: cleanSlug || article.id,
+        id: docId,
+        slug: cleanSlug || docId,
         isDraft,
         status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
+        lastUpdated: article.lastUpdated || new Date().toISOString(),
       };
       const cleaned = JSON.parse(JSON.stringify(toSave));
       await setDoc(docRef, cleaned, { merge: true });
@@ -147,7 +153,7 @@ export async function saveOneArticleToFirestore(article: FirestoreArticle): Prom
     }
   };
 
-  return withTimeout(saveTask(), 4000, false);
+  return withTimeout(saveTask(), 8000, false);
 }
 
 /**
@@ -160,18 +166,24 @@ export async function saveArticlesToFirestore(articles: FirestoreArticle[]): Pro
 
   const batchTask = async (): Promise<boolean> => {
     try {
+      await ensureFirebaseAuth();
+      const nowIso = new Date().toISOString();
       // Firestore batches are limited to 500 ops. Split if needed.
       const BATCH_SIZE = 450;
       for (let i = 0; i < articles.length; i += BATCH_SIZE) {
         const batch = writeBatch(db);
         const chunk = articles.slice(i, i + BATCH_SIZE);
         for (const article of chunk) {
-          const docRef = doc(db, ARTICLES_COLLECTION, article.id);
+          const docId = article.id || article.slug;
+          if (!docId) continue;
+          const docRef = doc(db, ARTICLES_COLLECTION, docId);
           const isDraft = Boolean(article.isDraft ?? (article.status === 'draft'));
           const toSave = {
             ...article,
+            id: docId,
             isDraft,
             status: (isDraft ? 'draft' : 'published') as 'published' | 'draft',
+            lastUpdated: article.lastUpdated || nowIso,
           };
           const cleaned = JSON.parse(JSON.stringify(toSave));
           batch.set(docRef, cleaned, { merge: true });
@@ -185,7 +197,7 @@ export async function saveArticlesToFirestore(articles: FirestoreArticle[]): Pro
     }
   };
 
-  return withTimeout(batchTask(), 5000, false);
+  return withTimeout(batchTask(), 10000, false);
 }
 
 /**
@@ -198,6 +210,7 @@ export async function deleteArticleFromFirestore(id: string, slug?: string): Pro
 
   const deleteTask = async (): Promise<boolean> => {
     try {
+      await ensureFirebaseAuth();
       const batch = writeBatch(db);
 
       // Delete the article document
@@ -225,7 +238,7 @@ export async function deleteArticleFromFirestore(id: string, slug?: string): Pro
     }
   };
 
-  return withTimeout(deleteTask(), 4000, false);
+  return withTimeout(deleteTask(), 6000, false);
 }
 
 /**
