@@ -22,18 +22,15 @@ body {
 
 /* Universal safe word-wrapping for cards, headings & mobile layouts */
 .break-long-words {
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-  word-break: break-all !important;
-  word-wrap: break-word !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
+  overflow-wrap: break-word;
+  word-break: normal;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .break-anywhere {
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-  word-wrap: break-word !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -48,8 +45,9 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Inter', sans-serif;
   font-size: 1.0625rem; /* ~17px desktop */
   line-height: 1.85;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: none;
 }
 
 .article-prose table {

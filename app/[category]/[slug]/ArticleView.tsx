@@ -454,7 +454,7 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
 
             {/* Article Long-Form Body HTML with High-Contrast Prose Styling */}
             <div
-              className="article-prose pt-4 break-long-words overflow-x-auto min-w-0 max-w-full"
+              className="article-prose pt-4 overflow-x-auto min-w-0 max-w-full"
               dangerouslySetInnerHTML={{ __html: formatArticleContent(article.content) }}
             />
 
