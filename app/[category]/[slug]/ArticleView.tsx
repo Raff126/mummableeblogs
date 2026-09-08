@@ -169,11 +169,8 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8EDEF] py-20 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center space-y-3 max-w-sm">
-          <span className="text-3xl animate-pulse">🐝</span>
-          <p className="font-serif text-lg font-bold text-[#683846]">Loading UAE Guide...</p>
-        </div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#B75B70] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
