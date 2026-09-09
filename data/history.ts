@@ -1,194 +1,185 @@
-// System & Activity History Engine for MummaBee CMS
+// Website & Admin Content History Engine
+// Tracks all editorial content updates, drafts, publications, homepage changes, and discount code updates.
 
-export interface HistoryEvent {
+import { ArticleItem } from './articles';
+import articlesData from './articles.json';
+
+export interface ContentHistoryItem {
   id: string;
   timestamp: string; // ISO string
-  type: 'article' | 'settings' | 'deal' | 'media' | 'homepage' | 'system' | 'user';
-  action: 'create' | 'update' | 'publish' | 'draft' | 'delete' | 'deploy' | 'sync' | 'login';
+  type: 'article' | 'draft' | 'homepage' | 'deal' | 'category' | 'page';
+  action: 'published' | 'drafted' | 'updated' | 'created' | 'deleted';
   title: string;
-  description: string;
-  user: string;
-  role?: string;
-  badge: string;
-  link?: string;
-  details?: Record<string, any>;
+  summary: string;
+  category?: string;
+  author: string;
+  status: 'Published' | 'Draft' | 'Updated';
+  badgeColor: string;
+  viewLink?: string;
+  editLink?: string;
 }
 
-const HISTORY_STORAGE_KEY = 'mummabee_admin_history';
+const STORAGE_KEY = 'mummabee_content_history_custom';
 
-const INITIAL_HISTORY: HistoryEvent[] = [
+// Manual/custom edits logged during CMS editing sessions
+const SEED_MANUAL_CHANGES: ContentHistoryItem[] = [
   {
-    id: 'hist-1',
-    timestamp: '2026-09-09T16:44:23Z',
-    type: 'system',
-    action: 'deploy',
-    title: 'Firebase Hosting Deployed',
-    description: 'Successfully deployed 255 production files to Firebase Hosting (mummabeeblogss.web.app).',
-    user: 'Donne',
-    role: 'Admin',
-    badge: '🚀 DEPLOYMENT',
-    link: 'https://mummabeeblogss.web.app',
-  },
-  {
-    id: 'hist-2',
-    timestamp: '2026-09-09T16:31:41Z',
-    type: 'system',
-    action: 'sync',
-    title: 'Database Synchronized',
-    description: 'Synchronized 37 articles from Firestore into static data cache (data/articles.json).',
-    user: 'System',
-    role: 'Admin',
-    badge: '🔄 DB SYNC',
-  },
-  {
-    id: 'hist-3',
-    timestamp: '2026-09-09T16:28:44Z',
-    type: 'article',
-    action: 'publish',
-    title: 'Moving to the UAE: Everything You Need to Know Before You Go',
-    description: 'Published new comprehensive relocation guide under The Expat Edit category.',
-    user: 'Donne',
-    role: 'Admin',
-    badge: '📝 PUBLISHED',
-    link: '/the-expat-edit/moving-to-the-uae-everything-you-need-to-know-before-you-go',
-  },
-  {
-    id: 'hist-4',
-    timestamp: '2026-09-09T15:50:12Z',
-    type: 'article',
-    action: 'publish',
-    title: 'The Real Cost of Living in the UAE',
-    description: 'Published detailed 13-point family budgeting breakdown for UAE expats.',
-    user: 'Donne',
-    role: 'Admin',
-    badge: '📝 PUBLISHED',
-    link: '/family-life/the-real-cost-of-living-in-the-uae',
-  },
-  {
-    id: 'hist-5',
-    timestamp: '2026-09-09T15:35:04Z',
-    type: 'article',
-    action: 'publish',
-    title: 'Our Favourite Family Money-Saving Apps in the UAE',
-    description: 'Published top tested money-saving and discount applications for Dubai and Abu Dhabi families.',
-    user: 'Donne',
-    role: 'Admin',
-    badge: '📝 PUBLISHED',
-    link: '/family-life/our-favourite-family-money-saving-apps-in-the-uae',
-  },
-  {
-    id: 'hist-6',
-    timestamp: '2026-09-09T15:15:22Z',
-    type: 'article',
-    action: 'publish',
-    title: 'Dubai or Abu Dhabi: Which Is Better for Your Family?',
-    description: 'Published comparative relocation & lifestyle analysis for families choosing between emirates.',
-    user: 'Donne',
-    role: 'Admin',
-    badge: '📝 PUBLISHED',
-    link: '/travel/dubai-or-abu-dhabi-which-is-better-for-your-family-8076',
-  },
-  {
-    id: 'hist-7',
-    timestamp: '2026-09-09T00:14:06Z',
-    type: 'system',
-    action: 'update',
-    title: 'Publish & Draft Status Consistency Fix',
-    description: 'Hardened status toggling across admin tables, edit screens, and live cloud database.',
-    user: 'Admin',
-    role: 'Admin',
-    badge: '⚙️ SYSTEM FIX',
-  },
-  {
-    id: 'hist-8',
-    timestamp: '2026-09-08T23:42:11Z',
-    type: 'article',
-    action: 'update',
-    title: 'Editorial Typography & Content Formatter Cleaned',
-    description: 'MS Word pasted styles stripped, transparent text eliminated, and comparison tables auto-spaced.',
-    user: 'Admin',
-    role: 'Admin',
-    badge: '✍️ FORMATTING',
-  },
-  {
-    id: 'hist-9',
-    timestamp: '2026-09-08T22:46:10Z',
+    id: 'chg-exp-edit',
+    timestamp: '2026-09-09T08:31:00Z',
     type: 'homepage',
-    action: 'update',
-    title: 'The Expat Edit Homepage Section Updated',
-    description: 'Connected dynamic article resolver for curated UAE expat family guides.',
-    user: 'Donne',
-    role: 'Admin',
-    badge: '🏡 HOMEPAGE',
+    action: 'updated',
+    title: 'The Expat Edit Section Updated',
+    summary: 'Configured dynamic article display on homepage for The Expat Edit category.',
+    category: 'The Expat Edit',
+    author: 'Donne',
+    status: 'Updated',
+    badgeColor: 'bg-[#B75B70] text-white',
+    viewLink: '/#expat-edit',
+    editLink: '/admin/homepage',
   },
   {
-    id: 'hist-10',
-    timestamp: '2026-09-08T21:56:00Z',
-    type: 'system',
-    action: 'update',
-    title: 'Draft Isolation & Security Verified',
-    description: 'Verified draft articles remain strictly inaccessible to public visitors on live site.',
-    user: 'Admin',
-    role: 'Admin',
-    badge: '🔒 SECURITY',
+    id: 'chg-home-hero',
+    timestamp: '2026-09-08T22:15:00Z',
+    type: 'homepage',
+    action: 'updated',
+    title: 'Homepage Hero Headline & Proof Stats Updated',
+    summary: 'Refined hero typography, subtitle, and tested guide statistics.',
+    category: 'Homepage',
+    author: 'Donne',
+    status: 'Updated',
+    badgeColor: 'bg-[#683846] text-white',
+    viewLink: '/',
+    editLink: '/admin/homepage',
+  },
+  {
+    id: 'chg-deal-1',
+    timestamp: '2026-09-08T18:30:00Z',
+    type: 'deal',
+    action: 'updated',
+    title: 'Discount Codes & Deals Verified',
+    summary: 'Checked discount codes and exclusive family offers for UAE brands.',
+    category: 'Deals',
+    author: 'Admin',
+    status: 'Updated',
+    badgeColor: 'bg-[#D79A30] text-white',
+    viewLink: '/uae-deals',
+    editLink: '/admin/deals',
+  },
+  {
+    id: 'chg-cat-1',
+    timestamp: '2026-09-08T14:10:00Z',
+    type: 'category',
+    action: 'updated',
+    title: 'Category Hubs & Curated Slugs Organized',
+    summary: 'Updated category descriptions and subcategories for The Expat Edit and Family Life.',
+    category: 'Categories',
+    author: 'Admin',
+    status: 'Updated',
+    badgeColor: 'bg-[#4D7987] text-white',
+    viewLink: '/the-expat-edit',
+    editLink: '/admin/categories',
   },
 ];
 
-export function getHistoryEvents(): HistoryEvent[] {
-  if (typeof window === 'undefined') {
-    return INITIAL_HISTORY;
-  }
-
+export function getCustomHistoryLogs(): ContentHistoryItem[] {
+  if (typeof window === 'undefined') return SEED_MANUAL_CHANGES;
   try {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(INITIAL_HISTORY));
-      return INITIAL_HISTORY;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_MANUAL_CHANGES));
+      return SEED_MANUAL_CHANGES;
     }
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
+    if (Array.isArray(parsed)) return parsed;
   } catch (_) {}
-
-  return INITIAL_HISTORY;
+  return SEED_MANUAL_CHANGES;
 }
 
-export function recordHistoryEvent(
-  event: Omit<HistoryEvent, 'id' | 'timestamp'> & { timestamp?: string }
-): HistoryEvent {
-  const newEvent: HistoryEvent = {
-    ...event,
-    id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-    timestamp: event.timestamp || new Date().toISOString(),
+export function recordContentChange(
+  item: Omit<ContentHistoryItem, 'id' | 'timestamp'> & { timestamp?: string }
+): ContentHistoryItem {
+  const newItem: ContentHistoryItem = {
+    ...item,
+    id: `chg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    timestamp: item.timestamp || new Date().toISOString(),
   };
 
   if (typeof window !== 'undefined') {
     try {
-      const current = getHistoryEvents();
-      const updated = [newEvent, ...current].slice(0, 200); // keep up to 200 most recent logs
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('mummabee_history_updated', { detail: newEvent }));
+      const current = getCustomHistoryLogs();
+      const updated = [newItem, ...current].slice(0, 150);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('mummabee_history_updated', { detail: newItem }));
     } catch (_) {}
   }
 
-  return newEvent;
+  return newItem;
 }
 
-export function clearHistoryEvents(): void {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([]));
-      window.dispatchEvent(new CustomEvent('mummabee_history_updated'));
-    } catch (_) {}
-  }
-}
+/**
+ * Builds the complete chronological list of all article publications, drafts, and site edits.
+ */
+export function getAllContentHistory(currentArticles?: ArticleItem[]): ContentHistoryItem[] {
+  const articlesList: ArticleItem[] = currentArticles && currentArticles.length > 0 
+    ? currentArticles 
+    : (articlesData as ArticleItem[]);
 
-export function resetHistoryToDefault(): void {
-  if (typeof window !== 'undefined') {
+  const articleHistoryItems: ContentHistoryItem[] = articlesList.map((art) => {
+    const isDraft = Boolean(art.isDraft || art.status === 'draft');
+    const categoryName = art.category ? art.category.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : 'General';
+    const cleanDate = art.lastUpdated || art.publishedAt || '2026-09-08T00:00:00Z';
+    
+    // Convert to ISO timestamp if needed
+    let isoTimestamp: string;
     try {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(INITIAL_HISTORY));
-      window.dispatchEvent(new CustomEvent('mummabee_history_updated'));
-    } catch (_) {}
-  }
+      const parsedTime = new Date(cleanDate).getTime();
+      isoTimestamp = !isNaN(parsedTime) && parsedTime > 0 ? new Date(cleanDate).toISOString() : new Date().toISOString();
+    } catch (_) {
+      isoTimestamp = new Date().toISOString();
+    }
+
+    if (isDraft) {
+      return {
+        id: `art-hist-${art.id}`,
+        timestamp: isoTimestamp,
+        type: 'draft',
+        action: 'drafted',
+        title: art.title,
+        summary: art.excerpt ? (art.excerpt.length > 130 ? art.excerpt.slice(0, 130) + '...' : art.excerpt) : `Saved as draft under ${categoryName}.`,
+        category: categoryName,
+        author: art.author || 'Donne',
+        status: 'Draft',
+        badgeColor: 'bg-amber-100 text-amber-900 border border-amber-300',
+        viewLink: undefined,
+        editLink: `/admin/articles/${art.id}`,
+      };
+    } else {
+      return {
+        id: `art-hist-${art.id}`,
+        timestamp: isoTimestamp,
+        type: 'article',
+        action: 'published',
+        title: art.title,
+        summary: art.excerpt ? (art.excerpt.length > 130 ? art.excerpt.slice(0, 130) + '...' : art.excerpt) : `Published live in category ${categoryName}.`,
+        category: categoryName,
+        author: art.author || 'Donne',
+        status: 'Published',
+        badgeColor: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
+        viewLink: `/${art.category}/${art.slug}`,
+        editLink: `/admin/articles/${art.id}`,
+      };
+    }
+  });
+
+  const manualLogs = getCustomHistoryLogs();
+
+  // Combine and sort by timestamp descending
+  const combined = [...manualLogs, ...articleHistoryItems];
+  combined.sort((a, b) => {
+    const timeA = new Date(a.timestamp).getTime() || 0;
+    const timeB = new Date(b.timestamp).getTime() || 0;
+    return timeB - timeA;
+  });
+
+  return combined;
 }

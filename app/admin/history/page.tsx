@@ -3,49 +3,55 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
-  HistoryEvent,
-  getHistoryEvents,
-  recordHistoryEvent,
-  resetHistoryToDefault,
-  clearHistoryEvents,
+  ContentHistoryItem,
+  getAllContentHistory,
+  recordContentChange,
 } from '../../../data/history';
-import { getAnalyticsSummary, AnalyticsSummary } from '../../../data/analytics';
-import { getCurrentUser, isAdmin } from '../../../data/users';
+import { getInitialArticles, loadArticlesFromServer } from '../../../data/store';
+import { ArticleItem } from '../../../data/articles';
+import { isAdmin } from '../../../data/users';
 
 export default function AdminHistoryPage() {
-  const [events, setEvents] = useState<HistoryEvent[]>([]);
+  const [historyItems, setHistoryItems] = useState<ContentHistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'article' | 'system' | 'visitor'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'published' | 'draft' | 'site'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7d' | '30d'>('all');
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsSummary | null>(null);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteDescription, setNoteDescription] = useState('');
-  const [noteType, setNoteType] = useState<'system' | 'article' | 'settings'>('system');
+  const [customTitle, setCustomTitle] = useState('');
+  const [customSummary, setCustomSummary] = useState('');
+  const [customCategory, setCustomCategory] = useState('Homepage');
   const [feedbackMsg, setFeedbackMsg] = useState('');
 
-  const currentUser = getCurrentUser();
   const userIsAdmin = isAdmin();
 
-  const loadData = () => {
-    setEvents(getHistoryEvents());
+  const loadAllHistory = async () => {
+    // 1. Load from local cache first
+    const local = getInitialArticles();
+    const items = getAllContentHistory(local);
+    setHistoryItems(items);
+
+    // 2. Fetch latest server/Firestore articles to ensure newly created drafts or publishes appear immediately
     try {
-      const summary = getAnalyticsSummary('30d');
-      setAnalyticsData(summary);
+      const server = await loadArticlesFromServer();
+      if (Array.isArray(server) && server.length > 0) {
+        const liveItems = getAllContentHistory(server);
+        setHistoryItems(liveItems);
+      }
     } catch (_) {}
   };
 
   useEffect(() => {
-    loadData();
+    loadAllHistory();
 
-    const handleUpdate = () => loadData();
+    const handleUpdate = () => loadAllHistory();
+    window.addEventListener('mummabee_content_updated', handleUpdate);
     window.addEventListener('mummabee_history_updated', handleUpdate);
-    window.addEventListener('mummabee_analytics_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
 
     return () => {
+      window.removeEventListener('mummabee_content_updated', handleUpdate);
       window.removeEventListener('mummabee_history_updated', handleUpdate);
-      window.removeEventListener('mummabee_analytics_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
   }, []);
@@ -55,102 +61,106 @@ export default function AdminHistoryPage() {
     setTimeout(() => setFeedbackMsg(''), 3000);
   };
 
-  // Filter events
-  const filteredEvents = useMemo(() => {
-    return events.filter((ev) => {
+  // Collect unique categories for filter dropdown
+  const categoriesList = useMemo(() => {
+    const cats = new Set<string>();
+    historyItems.forEach((item) => {
+      if (item.category) cats.add(item.category);
+    });
+    return Array.from(cats).sort();
+  }, [historyItems]);
+
+  // Filter items
+  const filteredItems = useMemo(() => {
+    return historyItems.filter((item) => {
       // Tab filter
-      if (activeFilter === 'article' && ev.type !== 'article' && ev.type !== 'homepage' && ev.type !== 'deal') {
+      if (activeTab === 'published' && item.status !== 'Published') return false;
+      if (activeTab === 'draft' && item.status !== 'Draft') return false;
+      if (activeTab === 'site' && item.type !== 'homepage' && item.type !== 'deal' && item.type !== 'category' && item.type !== 'page') {
         return false;
       }
-      if (activeFilter === 'system' && ev.type !== 'system' && ev.type !== 'settings' && ev.type !== 'user') {
+
+      // Category filter
+      if (categoryFilter !== 'all' && item.category !== categoryFilter) {
         return false;
       }
 
       // Date filter
       if (dateFilter !== 'all') {
-        const evTime = new Date(ev.timestamp).getTime();
+        const itemTime = new Date(item.timestamp).getTime();
         const now = Date.now();
         if (dateFilter === 'today') {
           const startOfToday = new Date().setHours(0, 0, 0, 0);
-          if (evTime < startOfToday) return false;
+          if (itemTime < startOfToday) return false;
         } else if (dateFilter === '7d') {
-          if (now - evTime > 7 * 24 * 60 * 60 * 1000) return false;
+          if (now - itemTime > 7 * 24 * 60 * 60 * 1000) return false;
         } else if (dateFilter === '30d') {
-          if (now - evTime > 30 * 24 * 60 * 60 * 1000) return false;
+          if (now - itemTime > 30 * 24 * 60 * 60 * 1000) return false;
         }
       }
 
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchTitle = ev.title.toLowerCase().includes(q);
-        const matchDesc = ev.description.toLowerCase().includes(q);
-        const matchUser = ev.user.toLowerCase().includes(q);
-        const matchBadge = ev.badge.toLowerCase().includes(q);
-        return matchTitle || matchDesc || matchUser || matchBadge;
+        const matchTitle = (item.title || '').toLowerCase().includes(q);
+        const matchSummary = (item.summary || '').toLowerCase().includes(q);
+        const matchAuthor = (item.author || '').toLowerCase().includes(q);
+        const matchCategory = (item.category || '').toLowerCase().includes(q);
+        return matchTitle || matchSummary || matchAuthor || matchCategory;
       }
 
       return true;
     });
-  }, [events, activeFilter, dateFilter, searchQuery]);
+  }, [historyItems, activeTab, categoryFilter, dateFilter, searchQuery]);
 
-  const handleAddCustomEvent = (e: React.FormEvent) => {
+  const handleAddCustomChange = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!noteTitle.trim()) return;
+    if (!customTitle.trim()) return;
 
-    recordHistoryEvent({
-      type: noteType,
-      action: 'update',
-      title: noteTitle.trim(),
-      description: noteDescription.trim() || 'Manual admin note logged in history.',
-      user: currentUser?.name || 'Admin',
-      role: currentUser?.role || 'Admin',
-      badge: noteType === 'article' ? '📝 EDITORIAL NOTE' : '⚙️ ADMIN NOTE',
+    recordContentChange({
+      type: 'homepage',
+      action: 'updated',
+      title: customTitle.trim(),
+      summary: customSummary.trim() || 'Editorial modification logged.',
+      category: customCategory,
+      author: 'Donne',
+      status: 'Updated',
+      badgeColor: 'bg-[#683846] text-white',
+      editLink: '/admin/homepage',
+      viewLink: '/',
     });
 
-    setNoteTitle('');
-    setNoteDescription('');
+    setCustomTitle('');
+    setCustomSummary('');
     setIsLogModalOpen(false);
-    showFeedback('History event logged successfully!');
+    showFeedback('Content change note logged successfully!');
   };
 
   const handleExportCsv = () => {
-    if (events.length === 0) return;
-    const headers = ['Timestamp', 'Type', 'Action', 'Title', 'Description', 'User', 'Role', 'Link'];
-    const rows = events.map((ev) => [
-      ev.timestamp,
-      ev.type,
-      ev.action,
-      `"${(ev.title || '').replace(/"/g, '""')}"`,
-      `"${(ev.description || '').replace(/"/g, '""')}"`,
-      ev.user,
-      ev.role || '',
-      ev.link || '',
+    if (historyItems.length === 0) return;
+    const headers = ['Date', 'Status', 'Category', 'Title', 'Author', 'Summary', 'Link'];
+    const rows = historyItems.map((item) => [
+      item.timestamp,
+      item.status,
+      `"${(item.category || '').replace(/"/g, '""')}"`,
+      `"${(item.title || '').replace(/"/g, '""')}"`,
+      item.author,
+      `"${(item.summary || '').replace(/"/g, '""')}"`,
+      item.viewLink || item.editLink || '',
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `mummabee_history_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `mummabee_content_history_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showFeedback('History exported to CSV.');
+    showFeedback('Content history exported to CSV.');
   };
 
-  // Badge stylings
-  const getBadgeStyle = (action: string, type: string) => {
-    if (action === 'publish') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    if (action === 'deploy') return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-    if (action === 'sync') return 'bg-sky-50 text-sky-700 border-sky-200';
-    if (action === 'draft') return 'bg-amber-50 text-amber-700 border-amber-200';
-    if (action === 'delete') return 'bg-rose-50 text-rose-700 border-rose-200';
-    if (type === 'homepage') return 'bg-[#F8EDEF] text-[#B75B70] border-[#B75B70]/20';
-    return 'bg-purple-50 text-[#683846] border-[#683846]/20';
-  };
-
-  const formatEventDate = (iso: string) => {
+  const formatDate = (iso: string) => {
     try {
       const d = new Date(iso);
       return d.toLocaleDateString('en-US', {
@@ -173,7 +183,7 @@ export default function AdminHistoryPage() {
         </div>
         <h2 className="font-serif text-2xl font-bold text-[#683846]">Restricted Access</h2>
         <p className="text-xs text-[#332D2F]/70">
-          The System &amp; Activity History audit log is strictly restricted to full Administrators.
+          The Content &amp; Draft History log is strictly restricted to full Administrators.
         </p>
         <Link
           href="/admin"
@@ -185,20 +195,24 @@ export default function AdminHistoryPage() {
     );
   }
 
+  const publishedCount = historyItems.filter((h) => h.status === 'Published').length;
+  const draftCount = historyItems.filter((h) => h.status === 'Draft').length;
+  const siteEditsCount = historyItems.filter((h) => h.type === 'homepage' || h.type === 'deal' || h.type === 'category').length;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#B75B70]/15 shadow-soft">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F8EDEF] border border-[#B75B70]/20 text-[10px] font-bold text-[#B75B70] uppercase tracking-wider">
-            <span>🕒</span>
-            <span>AUDIT TRAIL &amp; TELEMETRY</span>
+            <span>📝</span>
+            <span>WEBSITE &amp; CMS HISTORY</span>
           </div>
           <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
-            System &amp; Activity History
+            Content &amp; Drafts History
           </h1>
           <p className="text-xs text-[#332D2F]/70 max-w-2xl leading-relaxed">
-            Chronological audit log tracking content publishing, editorial modifications, deployments, database synchronizations, and visitor activity.
+            Track all editorial updates, published articles, active drafts in progress, and homepage modifications across MummaBeeBlog.
           </p>
         </div>
 
@@ -231,295 +245,262 @@ export default function AdminHistoryPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-soft">
           <div className="flex items-center justify-between text-[#332D2F]/50 text-xs mb-1">
-            <span>Total Logged Events</span>
-            <span className="text-base">📋</span>
+            <span>Total Content Items</span>
+            <span className="text-base">📚</span>
           </div>
           <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
-            {events.length}
+            {historyItems.length}
           </div>
-          <span className="text-[10px] text-[#B75B70] font-medium mt-1 block">Full chronological audit</span>
+          <span className="text-[10px] text-[#B75B70] font-medium mt-1 block">Articles &amp; site sections</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-soft">
           <div className="flex items-center justify-between text-[#332D2F]/50 text-xs mb-1">
-            <span>Editorial Publishes</span>
-            <span className="text-base">📝</span>
+            <span>Live Published</span>
+            <span className="text-base">🟢</span>
           </div>
           <div className="font-serif text-2xl sm:text-3xl font-bold text-emerald-700">
-            {events.filter((e) => e.action === 'publish').length}
+            {publishedCount}
           </div>
-          <span className="text-[10px] text-emerald-600 font-medium mt-1 block">Live articles published</span>
+          <span className="text-[10px] text-emerald-600 font-medium mt-1 block">Visible to website visitors</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-soft">
           <div className="flex items-center justify-between text-[#332D2F]/50 text-xs mb-1">
-            <span>Deployments &amp; Syncs</span>
-            <span className="text-base">🚀</span>
+            <span>Active Drafts</span>
+            <span className="text-base">📝</span>
           </div>
-          <div className="font-serif text-2xl sm:text-3xl font-bold text-indigo-700">
-            {events.filter((e) => e.action === 'deploy' || e.action === 'sync').length}
+          <div className="font-serif text-2xl sm:text-3xl font-bold text-amber-700">
+            {draftCount}
           </div>
-          <span className="text-[10px] text-indigo-600 font-medium mt-1 block">Hosting releases &amp; cache syncs</span>
+          <span className="text-[10px] text-amber-600 font-medium mt-1 block">Work-in-progress in admin</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-soft">
           <div className="flex items-center justify-between text-[#332D2F]/50 text-xs mb-1">
-            <span>Visitor Telemetry</span>
-            <span className="text-base">📈</span>
+            <span>Homepage &amp; Site Edits</span>
+            <span className="text-base">🏡</span>
           </div>
           <div className="font-serif text-2xl sm:text-3xl font-bold text-[#B75B70]">
-            {analyticsData?.recentVisitors?.length || 0}
+            {siteEditsCount}
           </div>
-          <span className="text-[10px] text-[#332D2F]/60 font-medium mt-1 block">Recent visitor sessions</span>
+          <span className="text-[10px] text-[#332D2F]/60 font-medium mt-1 block">Layout, deals &amp; categories</span>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-soft space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Main Tabs */}
           <div className="flex items-center gap-1.5 p-1 bg-[#F8EDEF] rounded-xl overflow-x-auto">
             <button
-              onClick={() => setActiveFilter('all')}
+              onClick={() => setActiveTab('all')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeFilter === 'all' ? 'bg-[#683846] text-white shadow-xs' : 'text-[#683846] hover:bg-white/60'
+                activeTab === 'all' ? 'bg-[#683846] text-white shadow-xs' : 'text-[#683846] hover:bg-white/60'
               }`}
             >
-              All History ({events.length})
+              All Content ({historyItems.length})
             </button>
             <button
-              onClick={() => setActiveFilter('article')}
+              onClick={() => setActiveTab('published')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeFilter === 'article' ? 'bg-[#683846] text-white shadow-xs' : 'text-[#683846] hover:bg-white/60'
+                activeTab === 'published' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-800 hover:bg-white/60'
               }`}
             >
-              Content &amp; Editorial ({events.filter((e) => e.type === 'article' || e.type === 'homepage').length})
+              🟢 Published ({publishedCount})
             </button>
             <button
-              onClick={() => setActiveFilter('system')}
+              onClick={() => setActiveTab('draft')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeFilter === 'system' ? 'bg-[#683846] text-white shadow-xs' : 'text-[#683846] hover:bg-white/60'
+                activeTab === 'draft' ? 'bg-amber-700 text-white shadow-xs' : 'text-amber-800 hover:bg-white/60'
               }`}
             >
-              System &amp; Deployments ({events.filter((e) => e.type === 'system' || e.type === 'settings').length})
+              📝 Drafts ({draftCount})
             </button>
             <button
-              onClick={() => setActiveFilter('visitor')}
+              onClick={() => setActiveTab('site')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeFilter === 'visitor' ? 'bg-[#683846] text-white shadow-xs' : 'text-[#683846] hover:bg-white/60'
+                activeTab === 'site' ? 'bg-[#683846] text-white shadow-xs' : 'text-[#683846] hover:bg-white/60'
               }`}
             >
-              Visitor Telemetry ({analyticsData?.recentVisitors?.length || 0})
+              🏡 Homepage &amp; Deals ({siteEditsCount})
             </button>
           </div>
 
-          {/* Date Filter */}
-          {activeFilter !== 'visitor' && (
-            <div className="flex items-center gap-2 self-start md:self-auto">
+          {/* Category & Date Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Category Dropdown */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-[#332D2F]/60 font-medium">Category:</span>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="bg-[#F8EDEF] border border-[#B75B70]/20 text-[#683846] text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none max-w-[160px]"
+              >
+                <option value="all">All Categories</option>
+                {categoriesList.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date Dropdown */}
+            <div className="flex items-center gap-1.5">
               <span className="text-xs text-[#332D2F]/60 font-medium">Period:</span>
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as any)}
                 className="bg-[#F8EDEF] border border-[#B75B70]/20 text-[#683846] text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none"
               >
-                <option value="all">All Dates</option>
-                <option value="today">Today Only</option>
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
                 <option value="7d">Past 7 Days</option>
                 <option value="30d">Past 30 Days</option>
               </select>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Search Field */}
-        {activeFilter !== 'visitor' && (
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search history by keyword, title, author, or action..."
-              className="w-full bg-[#FEFAF9] border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-[#332D2F] placeholder-[#332D2F]/40 focus:outline-none focus:border-[#B75B70]"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 text-xs text-[#332D2F]/40 hover:text-[#683846]"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        )}
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by article title, category, summary, or author..."
+            className="w-full bg-[#FEFAF9] border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-[#332D2F] placeholder-[#332D2F]/40 focus:outline-none focus:border-[#B75B70]"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-2.5 text-xs text-[#332D2F]/40 hover:text-[#683846]"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Main History List (When Not Visitor Telemetry) */}
-      {activeFilter !== 'visitor' && (
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden">
-          {filteredEvents.length > 0 ? (
-            <div className="divide-y divide-gray-100">
-              {filteredEvents.map((event) => (
+      {/* Main Content History Table / List */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden">
+        {filteredItems.length > 0 ? (
+          <div className="divide-y divide-gray-100">
+            {filteredItems.map((item) => {
+              const isDraft = item.status === 'Draft';
+              return (
                 <div
-                  key={event.id}
-                  className="p-5 sm:p-6 hover:bg-[#F8EDEF]/30 transition-colors flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+                  key={item.id}
+                  className="p-5 sm:p-6 hover:bg-[#F8EDEF]/30 transition-colors flex flex-col md:flex-row md:items-start justify-between gap-4"
                 >
                   <div className="space-y-2 flex-1">
-                    {/* Top Row: Badge + Time + User */}
+                    {/* Status Badge + Category + Timestamp + Author */}
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getBadgeStyle(
-                          event.action,
-                          event.type
-                        )}`}
-                      >
-                        {event.badge || event.action}
-                      </span>
-                      <span className="text-[#332D2F]/40">•</span>
+                      {isDraft ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 uppercase tracking-wider">
+                          📝 DRAFT
+                        </span>
+                      ) : item.status === 'Published' ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase tracking-wider">
+                          🟢 PUBLISHED
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#F8EDEF] text-[#B75B70] border border-[#B75B70]/20 uppercase tracking-wider">
+                          ✏️ UPDATED
+                        </span>
+                      )}
+
+                      {item.category && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-[#332D2F]/70 border border-gray-200">
+                          {item.category}
+                        </span>
+                      )}
+
+                      <span className="text-[#332D2F]/30">•</span>
                       <span className="text-[11px] font-mono text-[#332D2F]/50">
-                        {formatEventDate(event.timestamp)}
+                        {formatDate(item.timestamp)}
                       </span>
-                      <span className="text-[#332D2F]/40">•</span>
+
+                      <span className="text-[#332D2F]/30">•</span>
                       <span className="text-[11px] text-[#683846] font-semibold flex items-center gap-1">
                         <span>👤</span>
-                        <span>{event.user}</span>
-                        {event.role && (
-                          <span className="text-[9px] px-1.5 py-0.2 bg-gray-100 rounded text-[#332D2F]/60">
-                            {event.role}
-                          </span>
-                        )}
+                        <span>{item.author}</span>
                       </span>
                     </div>
 
                     {/* Title */}
                     <h3 className="font-serif text-base sm:text-lg font-bold text-[#683846]">
-                      {event.title}
+                      {item.title}
                     </h3>
 
-                    {/* Description */}
-                    <p className="text-xs text-[#332D2F]/80 leading-relaxed font-sans">
-                      {event.description}
+                    {/* Summary / Excerpt */}
+                    <p className="text-xs text-[#332D2F]/80 leading-relaxed font-sans max-w-4xl">
+                      {item.summary}
                     </p>
                   </div>
 
-                  {/* Actions (if link exists) */}
-                  {event.link && (
-                    <div className="self-start sm:self-center shrink-0 pt-2 sm:pt-0">
+                  {/* Direct Actions: View on Site / Edit in CMS */}
+                  <div className="flex items-center gap-2 self-start md:self-center shrink-0 pt-2 md:pt-0">
+                    {item.editLink && (
                       <Link
-                        href={event.link}
-                        target={event.link.startsWith('http') ? '_blank' : undefined}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#F8EDEF] hover:bg-[#B75B70] hover:text-white text-[#683846] text-xs font-bold transition-all border border-[#B75B70]/20"
+                        href={item.editLink}
+                        className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-[#F8EDEF] hover:bg-[#683846] hover:text-white text-[#683846] text-xs font-bold transition-all border border-[#B75B70]/20 whitespace-nowrap"
+                      >
+                        <span>✎</span>
+                        <span>Edit</span>
+                      </Link>
+                    )}
+
+                    {item.viewLink && (
+                      <Link
+                        href={item.viewLink}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-white hover:bg-[#B75B70] hover:text-white text-[#B75B70] text-xs font-bold transition-all border border-[#B75B70]/30 shadow-2xs whitespace-nowrap"
                       >
                         <span>View</span>
-                        <span>→</span>
+                        <span>↗</span>
                       </Link>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-12 text-center space-y-3">
-              <span className="text-3xl">🔍</span>
-              <h3 className="font-serif text-lg font-bold text-[#683846]">No Matching History Records</h3>
-              <p className="text-xs text-[#332D2F]/60 max-w-sm mx-auto">
-                No events matched your selected search or filters. Try adjusting your keywords or date range.
-              </p>
-            </div>
-          )}
-
-          {/* Bottom Actions Toolbar */}
-          <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-[#332D2F]/60">
-            <span>Showing {filteredEvents.length} of {events.length} logged events</span>
-            <button
-              onClick={() => {
-                if (confirm('Reset history to initial sample records?')) {
-                  resetHistoryToDefault();
-                  showFeedback('History reset to defaults.');
-                }
-              }}
-              className="text-[#B75B70] hover:underline cursor-pointer font-medium"
-            >
-              Reset to default history
-            </button>
+              );
+            })}
           </div>
+        ) : (
+          <div className="p-12 text-center space-y-3">
+            <span className="text-3xl">🔍</span>
+            <h3 className="font-serif text-lg font-bold text-[#683846]">No Matching Changes Found</h3>
+            <p className="text-xs text-[#332D2F]/60 max-w-sm mx-auto">
+              No content records match your selected filters. Try switching tabs or clearing your search.
+            </p>
+          </div>
+        )}
+
+        {/* Footer info */}
+        <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-[#332D2F]/60">
+          <span>Showing {filteredItems.length} of {historyItems.length} total website content items</span>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setActiveTab('all');
+              setCategoryFilter('all');
+              setDateFilter('all');
+            }}
+            className="text-[#B75B70] hover:underline cursor-pointer font-medium"
+          >
+            Clear all filters
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* Visitor Telemetry Tab Stream */}
-      {activeFilter === 'visitor' && analyticsData && (
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-soft p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <div>
-              <h3 className="font-serif text-lg font-bold text-[#683846]">
-                Recent Visitor Telemetry Log
-              </h3>
-              <p className="text-xs text-[#332D2F]/60">
-                Live stream of recent visitor sessions tracked across your blog.
-              </p>
-            </div>
-            <Link
-              href="/admin/analytics"
-              className="px-3 py-1.5 bg-[#F8EDEF] hover:bg-[#B75B70] hover:text-white text-[#683846] text-xs font-bold rounded-full transition-all border border-[#B75B70]/20"
-            >
-              Open Full Analytics →
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-[#332D2F]">
-              <thead className="bg-[#F8EDEF] text-[11px] font-bold text-[#332D2F]/60 uppercase tracking-wider border-b border-[#B75B70]/10">
-                <tr>
-                  <th className="py-3 px-4">Time</th>
-                  <th className="py-3 px-4">Page Visited</th>
-                  <th className="py-3 px-4">Origin</th>
-                  <th className="py-3 px-4">Device</th>
-                  <th className="py-3 px-4">Browser &amp; OS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {analyticsData.recentVisitors.map((v) => {
-                  const d = new Date(v.timestamp);
-                  return (
-                    <tr key={v.id} className="hover:bg-[#F8EDEF]/40 transition-colors">
-                      <td className="py-3 px-4 text-[#332D2F]/50 font-mono text-[11px] whitespace-nowrap">
-                        {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Link
-                          href={v.path}
-                          target="_blank"
-                          className="font-bold text-[#683846] hover:text-[#B75B70] transition-colors block max-w-xs truncate"
-                        >
-                          {v.title || v.path}
-                        </Link>
-                        <span className="text-[10px] text-[#332D2F]/40 font-mono">{v.path}</span>
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="mr-1.5 text-base">{v.flag}</span>
-                        <span className="font-semibold text-[#332D2F]">{v.country}</span>
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap font-medium text-[#683846]">
-                        {v.device === 'Mobile' ? '📱 Mobile' : v.device === 'Tablet' ? '📟 Tablet' : '💻 Desktop'}
-                      </td>
-                      <td className="py-3 px-4 text-[#332D2F]/70 whitespace-nowrap">
-                        {v.browser} ({v.os})
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Log Custom Event Note */}
+      {/* Modal: Log Editorial Note */}
       {isLogModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-gray-100 shadow-2xl space-y-5 animate-fadeIn">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="font-serif text-lg font-bold text-[#683846]">
-                Log System or Editorial Note
+                Log Website / Editorial Change
               </h3>
               <button
                 onClick={() => setIsLogModalOpen(false)}
@@ -529,45 +510,50 @@ export default function AdminHistoryPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAddCustomEvent} className="space-y-4">
+            <form onSubmit={handleAddCustomChange} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#683846] mb-1">
-                  Category
+                  Section / Area
                 </label>
                 <select
-                  value={noteType}
-                  onChange={(e) => setNoteType(e.target.value as any)}
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
                   className="w-full bg-[#F8EDEF] border border-[#B75B70]/20 rounded-xl px-3.5 py-2 text-xs font-semibold text-[#683846] focus:outline-none"
                 >
-                  <option value="system">⚙️ System / Infrastructure</option>
-                  <option value="article">📝 Editorial / Content</option>
-                  <option value="settings">🔧 Configuration / Settings</option>
+                  <option value="Homepage">🏡 Homepage</option>
+                  <option value="The Expat Edit">🇦🇪 The Expat Edit</option>
+                  <option value="Family Life">👨‍👩‍👧‍👧 Family Life</option>
+                  <option value="UAE With Kids">🎡 UAE With Kids</option>
+                  <option value="Food & Dining">🍽️ Food &amp; Dining</option>
+                  <option value="Family Travel">✈️ Family Travel</option>
+                  <option value="School & Activities">🎒 School &amp; Activities</option>
+                  <option value="Deals">🏷️ Deals &amp; Codes</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[#683846] mb-1">
-                  Event Title *
+                  Change Summary / Title *
                 </label>
                 <input
                   type="text"
                   required
-                  value={noteTitle}
-                  onChange={(e) => setNoteTitle(e.target.value)}
-                  placeholder="e.g. Added partnership banner for Autumn campaign"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="e.g. Updated hero banner for winter break guide"
                   className="w-full bg-[#FEFAF9] border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-[#332D2F] focus:outline-none focus:border-[#B75B70]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[#683846] mb-1">
-                  Details &amp; Notes
+                  Description of Changes
                 </label>
                 <textarea
                   rows={3}
-                  value={noteDescription}
-                  onChange={(e) => setNoteDescription(e.target.value)}
-                  placeholder="Describe the change, milestone, or reason for future reference..."
+                  value={customSummary}
+                  onChange={(e) => setCustomSummary(e.target.value)}
+                  placeholder="Details of what was added, modified, or drafted..."
                   className="w-full bg-[#FEFAF9] border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-[#332D2F] focus:outline-none focus:border-[#B75B70]"
                 />
               </div>
