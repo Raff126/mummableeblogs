@@ -873,6 +873,28 @@ export default function AdminAnalyticsPage() {
         </div>
       )}
 
+      {/* Quick Link to System & Activity History */}
+      <div className="bg-white border border-[#B75B70]/15 rounded-3xl p-6 shadow-soft flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#F8EDEF] border border-[#B75B70]/20 flex items-center justify-center text-2xl shrink-0">
+            🕒
+          </div>
+          <div>
+            <h3 className="font-serif text-base font-bold text-[#683846]">
+              System &amp; Activity History
+            </h3>
+            <p className="text-xs text-[#332D2F]/60 mt-0.5">
+              View the full chronological audit trail of article publishing, deployments, and editorial changes.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/admin/history"
+          className="px-5 py-2.5 bg-[#683846] hover:bg-[#522b37] text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-xs whitespace-nowrap"
+        >
+          Open History Log →
+        </Link>
+      </div>
     </div>
   );
 }

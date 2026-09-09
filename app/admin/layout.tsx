@@ -36,6 +36,7 @@ const ALL_ADMIN_NAV: NavItem[] = [
   { label: 'User Management', path: '/admin/users', icon: '👥', adminOnly: true },
   { label: 'Settings', path: '/admin/settings', icon: '⚙️', adminOnly: true },
   { label: 'System Analytics', path: '/admin/analytics', icon: '📈', adminOnly: true },
+  { label: 'History', path: '/admin/history', icon: '🕒', adminOnly: true },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -114,7 +115,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isAdminOnlyRoute =
     cleanPath === '/admin/users' ||
     cleanPath === '/admin/settings' ||
-    cleanPath === '/admin/analytics';
+    cleanPath === '/admin/analytics' ||
+    cleanPath === '/admin/history';
 
   const isAccessForbidden = isAdminOnlyRoute && !userIsAdmin;
 
