@@ -62,10 +62,25 @@ export default function AdminGiveawayPage() {
     const handleUpdate = () => loadData();
     window.addEventListener('mummabee_giveaway_updated', handleUpdate);
     window.addEventListener('mummabee_giveaway_entries_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('mummabee_giveaway_channel');
+        channel.onmessage = (event) => {
+          if (event?.data?.type === 'GIVEAWAY_UPDATED' && event.data.campaign) {
+            setCampaign(event.data.campaign);
+          }
+        };
+      }
+    } catch (_) {}
 
     return () => {
+      if (channel) channel.close();
       window.removeEventListener('mummabee_giveaway_updated', handleUpdate);
       window.removeEventListener('mummabee_giveaway_entries_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
     };
   }, []);
 

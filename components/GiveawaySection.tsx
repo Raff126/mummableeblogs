@@ -36,24 +36,77 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
     const initial = getInitialGiveaway();
     setCampaign(initial);
 
-    // Sync from live Firestore in background
+    let unsubscribeFirestore: (() => void) | null = null;
+
+    // 1. Live real-time Firestore stream subscription across all devices
     import('../utils/firestoreSettings')
-      .then(({ fetchGiveawayFromFirestore }) => fetchGiveawayFromFirestore())
-      .then((fsCampaign) => {
-        if (fsCampaign && typeof fsCampaign === 'object') {
-          setCampaign(fsCampaign);
-          try {
-            localStorage.setItem(STORAGE_KEYS.GIVEAWAY, JSON.stringify(fsCampaign));
-          } catch (_) {}
-        }
+      .then(({ fetchGiveawayFromFirestore, subscribeToGiveaway }) => {
+        fetchGiveawayFromFirestore().then((fsCampaign) => {
+          if (fsCampaign && typeof fsCampaign === 'object') {
+            setCampaign(fsCampaign);
+            try {
+              localStorage.setItem(STORAGE_KEYS.GIVEAWAY, JSON.stringify(fsCampaign));
+            } catch (_) {}
+          }
+        });
+
+        unsubscribeFirestore = subscribeToGiveaway((liveCampaign) => {
+          if (liveCampaign && typeof liveCampaign === 'object') {
+            setCampaign(liveCampaign);
+            try {
+              localStorage.setItem(STORAGE_KEYS.GIVEAWAY, JSON.stringify(liveCampaign));
+            } catch (_) {}
+          }
+        });
       })
       .catch(() => {});
 
-    const handleUpdate = (e: any) => {
-      if (e?.detail) setCampaign(e.detail);
+    // 2. Cross-tab instant BroadcastChannel (< 5ms)
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('mummabee_giveaway_channel');
+        channel.onmessage = (event) => {
+          if (event?.data?.type === 'GIVEAWAY_UPDATED' && event.data.campaign) {
+            setCampaign(event.data.campaign);
+          }
+        };
+      }
+    } catch (_) {}
+
+    // 3. Cross-tab storage event listener
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEYS.GIVEAWAY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && typeof parsed === 'object') {
+            setCampaign((prev) => ({ ...prev, ...parsed }));
+          }
+        } catch (_) {}
+      }
     };
-    window.addEventListener('mummabee_giveaway_updated', handleUpdate);
-    return () => window.removeEventListener('mummabee_giveaway_updated', handleUpdate);
+    window.addEventListener('storage', handleStorage);
+
+    // 4. Same-window custom event listeners
+    const handleCustomUpdate = (e: any) => {
+      if (e?.detail) {
+        if (e.detail.key === STORAGE_KEYS.GIVEAWAY && e.detail.data) {
+          setCampaign(e.detail.data);
+        } else if (e.detail.id || typeof e.detail.isActive === 'boolean') {
+          setCampaign(e.detail);
+        }
+      }
+    };
+    window.addEventListener('mummabee_giveaway_updated', handleCustomUpdate);
+    window.addEventListener('mummabee_content_updated', handleCustomUpdate);
+
+    return () => {
+      if (unsubscribeFirestore) unsubscribeFirestore();
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('mummabee_giveaway_updated', handleCustomUpdate);
+      window.removeEventListener('mummabee_content_updated', handleCustomUpdate);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

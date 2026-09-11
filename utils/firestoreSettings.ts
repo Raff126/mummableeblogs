@@ -1,6 +1,6 @@
 'use client';
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getFirebaseDb, ensureFirebaseAuth } from './firebase';
 import {
   HomepageContent,
@@ -573,6 +573,36 @@ export async function fetchGiveawayFromFirestore(): Promise<GiveawayCampaign | n
   };
 
   return withTimeout(fetchTask(), 4000, null);
+}
+
+/**
+ * Real-time listener for Giveaway campaign updates across all devices & visitors.
+ */
+export function subscribeToGiveaway(callback: (campaign: GiveawayCampaign) => void): (() => void) | null {
+  const db = getFirebaseDb();
+  if (!db) return null;
+
+  try {
+    const docRef = doc(db, SETTINGS_COLLECTION, GIVEAWAY_DOC);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data && data.campaign && typeof data.campaign === 'object') {
+            callback(data.campaign as GiveawayCampaign);
+          }
+        }
+      },
+      (err) => {
+        console.warn('Firestore giveaway snapshot listener warning:', err);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.warn('Error subscribing to giveaway in Firestore:', err);
+    return null;
+  }
 }
 
 export async function saveGiveawayToFirestore(campaign: GiveawayCampaign): Promise<boolean> {

@@ -556,8 +556,21 @@ export function getInitialGiveaway(): GiveawayCampaign {
 export function saveGiveaway(campaign: GiveawayCampaign): void {
   if (typeof window === 'undefined') return;
   safeSetLocalStorage(STORAGE_KEYS.GIVEAWAY, JSON.stringify(campaign));
+  
+  // 1. Same-window custom events
   window.dispatchEvent(new CustomEvent('mummabee_giveaway_updated', { detail: campaign }));
+  window.dispatchEvent(new CustomEvent('mummabee_content_updated', { detail: { key: STORAGE_KEYS.GIVEAWAY, data: campaign } }));
 
+  // 2. Cross-tab BroadcastChannel instant message (< 5ms)
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      const channel = new BroadcastChannel('mummabee_giveaway_channel');
+      channel.postMessage({ type: 'GIVEAWAY_UPDATED', campaign });
+      channel.close();
+    }
+  } catch (_) {}
+
+  // 3. Firestore cloud sync
   import('../utils/firestoreSettings')
     .then(({ saveGiveawayToFirestore }) => {
       saveGiveawayToFirestore(campaign).catch((err) => {
