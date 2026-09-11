@@ -269,6 +269,46 @@ export async function fetchDeletedIdsFromFirestore(): Promise<Set<string>> {
 }
 
 /**
+ * Recover a deleted article in Firestore:
+ * Deletes the deletion tombstone document from DELETED_COLLECTION,
+ * and saves the recovered article back into ARTICLES_COLLECTION.
+ */
+export async function recoverArticleInFirestore(
+  id: string,
+  slug?: string,
+  article?: FirestoreArticle
+): Promise<boolean> {
+  const db = getFirebaseDb();
+  if (!db) return false;
+
+  const recoverTask = async (): Promise<boolean> => {
+    try {
+      await ensureFirebaseAuth();
+      const batch = writeBatch(db);
+
+      // Remove from DELETED_COLLECTION
+      batch.delete(doc(db, DELETED_COLLECTION, id));
+      if (slug) {
+        batch.delete(doc(db, DELETED_COLLECTION, slug));
+      }
+
+      // If article provided, restore to ARTICLES_COLLECTION
+      if (article) {
+        batch.set(doc(db, ARTICLES_COLLECTION, id), article);
+      }
+
+      await batch.commit();
+      return true;
+    } catch (err) {
+      console.warn('Error recovering article in Firestore:', err);
+      return false;
+    }
+  };
+
+  return withTimeout(recoverTask(), 6000, false);
+}
+
+/**
  * Seed Firestore with articles from a source array.
  * Only adds articles that don't already exist.
  * Called once on first admin load to populate Firestore from the static JSON.

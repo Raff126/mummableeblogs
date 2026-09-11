@@ -38,11 +38,16 @@ export default function ImageInputWithPaste({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      setMediaList(getInitialMedia());
-    } catch (e) {
-      setMediaList([]);
-    }
+    const update = () => {
+      try {
+        setMediaList(getInitialMedia());
+      } catch (e) {
+        setMediaList([]);
+      }
+    };
+    update();
+    window.addEventListener('mummabee_content_updated', update);
+    return () => window.removeEventListener('mummabee_content_updated', update);
   }, []);
 
   const uploadToServer = async (dataUrlOrFile: string | File, filenameHint?: string): Promise<string> => {
@@ -276,8 +281,8 @@ export default function ImageInputWithPaste({
               <button
                 type="button"
                 onClick={() => onChange('')}
-                title="Remove image"
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow-xs cursor-pointer"
+                title="Erase / Remove image"
+                className="absolute top-1.5 right-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md cursor-pointer transition-transform hover:scale-110"
               >
                 ✕
               </button>
@@ -291,7 +296,7 @@ export default function ImageInputWithPaste({
 
           {/* Action Inputs */}
           <div className="flex-1 w-full space-y-2.5">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
               <input
                 type="text"
                 value={value}
@@ -305,7 +310,7 @@ export default function ImageInputWithPaste({
                 }}
                 onPaste={handlePaste}
                 placeholder={placeholder}
-                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs text-[#332D2F] focus:ring-2 focus:ring-[#B75B70] focus:outline-none font-mono truncate"
+                className="flex-1 min-w-[140px] px-3 py-2 rounded-xl border border-gray-200 text-xs text-[#332D2F] focus:ring-2 focus:ring-[#B75B70] focus:outline-none font-mono truncate"
               />
               <button
                 type="button"
@@ -316,6 +321,17 @@ export default function ImageInputWithPaste({
                 <span>📤</span>
                 <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
               </button>
+              {value && (
+                <button
+                  type="button"
+                  onClick={() => onChange('')}
+                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1 shadow-2xs border border-rose-200 cursor-pointer"
+                  title="Erase this picture from the article"
+                >
+                  <span>🗑️</span>
+                  <span>Erase Photo</span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-[#332D2F]/70">
@@ -324,9 +340,10 @@ export default function ImageInputWithPaste({
                 <button
                   type="button"
                   onClick={() => onChange('')}
-                  className="text-red-500 hover:underline font-bold cursor-pointer"
+                  className="text-rose-600 hover:underline font-bold cursor-pointer flex items-center gap-1"
                 >
-                  Clear
+                  <span>✕</span>
+                  <span>Remove / Erase Photo</span>
                 </button>
               )}
             </div>

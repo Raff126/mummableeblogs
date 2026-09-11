@@ -356,29 +356,29 @@ export default function ArticleView({ initialArticle, categorySlug, slug }: Arti
           </header>
 
           {/* Featured Hero Photograph */}
-          <div className="space-y-2">
-            <div className="rounded-2xl overflow-hidden shadow-soft">
-              <div className="relative">
-                <img
-                  src={article.featuredImage}
-                  alt={article.imageAlt || article.title}
-                  fetchPriority="high"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (!target.src.includes('358792494_661391199240576_3424351230899219709_n.jpg')) {
-                      target.src = '/images/358792494_661391199240576_3424351230899219709_n.jpg';
-                    }
-                  }}
-                  className="w-full h-full object-cover"
-                />
+          {article.featuredImage && article.featuredImage.trim() ? (
+            <div className="space-y-2">
+              <div className="rounded-2xl overflow-hidden shadow-soft">
+                <div className="relative">
+                  <img
+                    src={article.featuredImage}
+                    alt={article.imageAlt || article.title}
+                    fetchPriority="high"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
+              {article.imageCaption && (
+                <p className="text-center text-xs text-[#332D2F]/80 italic pt-1 break-words">
+                  {article.imageCaption}
+                </p>
+              )}
             </div>
-            {article.imageCaption && (
-              <p className="text-center text-xs text-[#332D2F]/80 italic pt-1 break-words">
-                {article.imageCaption}
-              </p>
-            )}
-          </div>
+          ) : null}
 
           {/* Main Content Area */}
           <div className="space-y-6 sm:space-y-8 max-w-3xl mx-auto w-full min-w-0">

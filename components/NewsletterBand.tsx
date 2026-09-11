@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getInitialHomepage, DEFAULT_HOMEPAGE, HomepageContent, STORAGE_KEYS } from '../data/store';
+import { getInitialHomepage, DEFAULT_HOMEPAGE, HomepageContent, STORAGE_KEYS, getInitialSubscribers, saveSubscribers, Subscriber } from '../data/store';
 
 export default function NewsletterBand() {
   const [email, setEmail] = useState('');
@@ -18,12 +18,16 @@ export default function NewsletterBand() {
     try {
       const { fetchHomepageFromFirestore } = await import('../utils/firestoreSettings');
       const fsData = await fetchHomepageFromFirestore();
-      if (fsData && typeof fsData === 'object' && (fsData.newsletterHeadline || fsData.newsletterSubtext)) {
+      if (fsData && typeof fsData === 'object' && Object.keys(fsData).length > 0) {
         setContent((prev) => {
           if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
             return prev;
           }
-          return { ...prev, ...fsData };
+          const merged = { ...DEFAULT_HOMEPAGE, ...prev, ...fsData };
+          try {
+            localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(merged));
+          } catch (_) {}
+          return merged;
         });
         return;
       }
@@ -68,6 +72,21 @@ export default function NewsletterBand() {
 
     setIsSubmitting(true);
     try {
+      const cleanEmail = email.trim().toLowerCase();
+      try {
+        const currentSubs = getInitialSubscribers();
+        if (!currentSubs.some((s) => s.email.toLowerCase() === cleanEmail)) {
+          const newSub: Subscriber = {
+            id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            email: cleanEmail,
+            date: new Date().toISOString().split('T')[0],
+            source: 'Newsletter Band',
+            status: 'Active',
+          };
+          await saveSubscribers([newSub, ...currentSubs]);
+        }
+      } catch (_) {}
+
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       let response: any = { ok: true, json: () => Promise.resolve({ success: true }) };
       
@@ -75,7 +94,7 @@ export default function NewsletterBand() {
         response = await fetch('/api/subscribers/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, source: 'Newsletter Band' }),
+          body: JSON.stringify({ email: cleanEmail, source: 'Newsletter Band' }),
         });
       }
 
@@ -96,6 +115,9 @@ export default function NewsletterBand() {
     }
   };
 
+  const headline = content.newsletterHeadline !== undefined ? content.newsletterHeadline.trim() : (DEFAULT_HOMEPAGE.newsletterHeadline || 'UAE family finds, every Friday.');
+  const subtext = content.newsletterSubtext !== undefined ? content.newsletterSubtext.trim() : (DEFAULT_HOMEPAGE.newsletterSubtext || 'Weekend ideas, practical guides and honest recommendations.');
+
   return (
     <section className="py-14 sm:py-20 bg-white">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -111,13 +133,17 @@ export default function NewsletterBand() {
                 JOIN MUMMA BEE'S NEWSLETTER
               </span>
 
-              <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
-                {content.newsletterHeadline || 'UAE family finds, every Friday.'}
-              </h2>
+              {headline ? (
+                <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
+                  {headline}
+                </h2>
+              ) : null}
 
-              <p className="text-xs sm:text-sm text-[#F8EDEF]/90 max-w-lg leading-relaxed">
-                {content.newsletterSubtext || 'Weekend ideas, practical guides and honest recommendations.'}
-              </p>
+              {subtext ? (
+                <p className="text-xs sm:text-sm text-[#F8EDEF]/90 max-w-lg leading-relaxed">
+                  {subtext}
+                </p>
+              ) : null}
             </div>
 
             {/* Right Column: Input & Subscribe */}

@@ -56,10 +56,12 @@ export default function AboutView({ initialContent, initialTopGuides, topGuides 
 
     // 1. Query live Firestore first (cross-device cloud sync)
     (async () => {
+      let firestoreLoaded = false;
       try {
         const { fetchAboutFromFirestore } = await import('../../utils/firestoreSettings');
         const fsData = await fetchAboutFromFirestore();
-        if (fsData && typeof fsData === 'object' && (fsData.headline || fsData.profileImage)) {
+        if (fsData && typeof fsData === 'object' && (fsData.headline || fsData.profileImage || fsData.profileStory)) {
+          firestoreLoaded = true;
           setContent((prev) => {
             if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
               return prev;
@@ -77,24 +79,26 @@ export default function AboutView({ initialContent, initialTopGuides, topGuides 
         }
       } catch (_) {}
 
-      // 2. Fallback to API / static JSON without destructive overwriting
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const endpoint = isLocal ? `/api/about/?t=${Date.now()}` : `/data/about.json?t=${Date.now()}`;
-      fetch(endpoint, { cache: 'no-store' })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && typeof data === 'object') {
-            setContent((prev) => {
-              const merged = { ...data, ...prev };
-              const effectiveImg = merged.profileImage || resolvedImage;
-              if (effectiveImg) {
-                setImgSrc(effectiveImg);
-              }
-              return merged;
-            });
-          }
-        })
-        .catch(() => {});
+      // 2. Fallback to API / static JSON without destructive overwriting only if Firestore didn't load
+      if (!firestoreLoaded) {
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const endpoint = isLocal ? `/api/about/?t=${Date.now()}` : `/data/about.json?t=${Date.now()}`;
+        fetch(endpoint, { cache: 'no-store' })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data && typeof data === 'object') {
+              setContent((prev) => {
+                const merged = { ...data, ...prev };
+                const effectiveImg = merged.profileImage || resolvedImage;
+                if (effectiveImg) {
+                  setImgSrc(effectiveImg);
+                }
+                return merged;
+              });
+            }
+          })
+          .catch(() => {});
+      }
     })();
   };
 
@@ -125,22 +129,38 @@ export default function AboutView({ initialContent, initialTopGuides, topGuides 
     };
   }, []);
 
+  const eyebrow = content.eyebrow !== undefined ? content.eyebrow.trim() : (DEFAULT_ABOUT.eyebrow || 'THE MUM BEHIND THE GUIDES');
+  const headline = content.headline !== undefined ? content.headline.trim() : (DEFAULT_ABOUT.headline || "Hi, I'm Donne, the mum behind Mumma Bee Blog.");
+  const leadText = content.leadText !== undefined ? content.leadText.trim() : (DEFAULT_ABOUT.leadText || "I'm a mum raising two girls between Dubai and Abu Dhabi. MummaBeeBlog is where I share the family-friendly places we explore, the practical guides I wish I'd had, and the honest recommendations I'd genuinely give to another parent.");
+  const profileBadgeText = content.profileBadgeText !== undefined ? content.profileBadgeText.trim() : (DEFAULT_ABOUT.profileBadgeText || 'MEET DONNE');
+  const profileHeading = content.profileHeading !== undefined ? content.profileHeading.trim() : (DEFAULT_ABOUT.profileHeading || 'Why I Started MummaBeeBlog');
+  const profileStory = content.profileStory !== undefined ? content.profileStory.trim() : DEFAULT_ABOUT.profileStory;
+  const privacyNote = content.privacyNote !== undefined ? content.privacyNote.trim() : DEFAULT_ABOUT.privacyNote;
+
   return (
     <>
       {/* Hero Section */}
-      <section className="bg-[#F8EDEF] py-14 lg:py-20 border-b border-[#B75B70]/15">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <span className="text-[11px] font-sans font-bold tracking-widest text-[#B75B70] uppercase block">
-            {content.eyebrow || 'THE MUM BEHIND THE GUIDES'}
-          </span>
-          <h1 className="font-serif text-3xl sm:text-5xl font-bold text-[#683846] leading-tight">
-            {content.headline || "Hi, I'm Donne, the mum behind Mumma Bee Blog."}
-          </h1>
-          <p className="font-sans text-base sm:text-lg text-[#332D2F] max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
-            {content.leadText || "I'm a mum raising two girls between Dubai and Abu Dhabi. MummaBeeBlog is where I share the family-friendly places we explore, the practical guides I wish I'd had, and the honest recommendations I'd genuinely give to another parent."}
-          </p>
-        </div>
-      </section>
+      {(eyebrow || headline || leadText) && (
+        <section className="bg-[#F8EDEF] py-14 lg:py-20 border-b border-[#B75B70]/15">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+            {eyebrow ? (
+              <span className="text-[11px] font-sans font-bold tracking-widest text-[#B75B70] uppercase block">
+                {eyebrow}
+              </span>
+            ) : null}
+            {headline ? (
+              <h1 className="font-serif text-3xl sm:text-5xl font-bold text-[#683846] leading-tight">
+                {headline}
+              </h1>
+            ) : null}
+            {leadText ? (
+              <p className="font-sans text-base sm:text-lg text-[#332D2F] max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
+                {leadText}
+              </p>
+            ) : null}
+          </div>
+        </section>
+      )}
 
       {/* Main Content */}
       <section className="py-20 bg-white">
@@ -148,52 +168,88 @@ export default function AboutView({ initialContent, initialTopGuides, topGuides 
           {/* Author Profile Highlight */}
           <div className="bg-[#F8EDEF] p-8 sm:p-10 rounded-3xl border border-[#B75B70]/20 flex flex-col sm:flex-row items-center sm:items-start gap-8 shadow-soft">
             <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full p-1 bg-white border-2 border-[#B75B70]/40 shadow-xs flex-shrink-0">
-              <img
-                src={content.profileImage || "/images/358792494_661391199240576_3424351230899219709_n.jpg"}
-                alt="Donne - MummaBeeBlog"
-                className="w-full h-full object-cover rounded-full"
-              />
+              {(content.profileImage !== undefined && content.profileImage.trim() === '') ? (
+                <div className="w-full h-full rounded-full bg-[#F8EDEF] flex items-center justify-center p-4">
+                  <img
+                    src="/images/mama-logo.png"
+                    alt="MummaBee logo"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain opacity-85"
+                  />
+                </div>
+              ) : (
+                <img
+                  src={content.profileImage || "/images/358792494_661391199240576_3424351230899219709_n.jpg"}
+                  alt="Donne - MummaBeeBlog"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/images/mama-logo.png';
+                  }}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              )}
             </div>
             <div className="space-y-3 text-center sm:text-left">
-              <span className="text-[10px] font-bold tracking-widest text-[#B75B70] uppercase block">
-                {content.profileBadgeText || 'MEET DONNE'}
-              </span>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
-                {content.profileHeading || 'Why I Started MummaBeeBlog'}
-              </h2>
-              <p className="text-sm sm:text-base text-[#332D2F] leading-relaxed whitespace-pre-line">
-                {content.profileStory || "When we first started exploring the UAE as a family with young kids, finding genuinely useful, family-first information wasn't easy. Tourism websites often copied the same generic bullet points, without answering the practical questions parents actually care about: Is it stroller-accessible? What's the budget? Is there clean shade? When does it get crowded?"}
-              </p>
+              {profileBadgeText ? (
+                <span className="text-[10px] font-bold tracking-widest text-[#B75B70] uppercase block">
+                  {profileBadgeText}
+                </span>
+              ) : null}
+              {profileHeading ? (
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
+                  {profileHeading}
+                </h2>
+              ) : null}
+              {profileStory ? (
+                <p className="text-sm sm:text-base text-[#332D2F] leading-relaxed whitespace-pre-line">
+                  {profileStory}
+                </p>
+              ) : null}
             </div>
           </div>
 
           {/* Core Philosophy: Experience & Trust */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-soft space-y-3">
-              <span className="text-2xl block">🔍</span>
-              <h3 className="font-serif text-xl font-bold text-[#683846]">
-                {content.pillar1Title || 'Tested Before Recommended'}
-              </h3>
-              <p className="text-xs sm:text-sm text-[#332D2F] leading-relaxed whitespace-pre-line">
-                {content.pillar1Text || "Every venue, play area, and family dining spot featured on MummaBeeBlog has been personally visited and tested with my own daughters. If an experience doesn't meet our standards, it doesn't make it onto the website."}
-              </p>
-            </div>
+          {(content.pillar1Title || content.pillar1Text || content.pillar2Title || content.pillar2Text) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(content.pillar1Title || content.pillar1Text) && (
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-soft space-y-3">
+                  <span className="text-2xl block">🔍</span>
+                  {content.pillar1Title ? (
+                    <h3 className="font-serif text-xl font-bold text-[#683846]">
+                      {content.pillar1Title}
+                    </h3>
+                  ) : null}
+                  {content.pillar1Text ? (
+                    <p className="text-xs sm:text-sm text-[#332D2F] leading-relaxed whitespace-pre-line">
+                      {content.pillar1Text}
+                    </p>
+                  ) : null}
+                </div>
+              )}
 
-            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-soft space-y-3">
-              <span className="text-2xl block">👨‍👩‍👧‍👧</span>
-              <h3 className="font-serif text-xl font-bold text-[#683846]">
-                {content.pillar2Title || 'Our Family Perspective'}
-              </h3>
-              <p className="text-xs sm:text-sm text-[#332D2F] leading-relaxed whitespace-pre-line">
-                {content.pillar2Text || 'Living between Dubai and Abu Dhabi allows us to bring a balanced, two-city perspective. We navigate the early morning school runs, high-summer indoor transitions, and weekend coastal road trips just like you.'}
-              </p>
+              {(content.pillar2Title || content.pillar2Text) && (
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-soft space-y-3">
+                  <span className="text-2xl block">👨‍👩‍👧‍👧</span>
+                  {content.pillar2Title ? (
+                    <h3 className="font-serif text-xl font-bold text-[#683846]">
+                      {content.pillar2Title}
+                    </h3>
+                  ) : null}
+                  {content.pillar2Text ? (
+                    <p className="text-xs sm:text-sm text-[#332D2F] leading-relaxed whitespace-pre-line">
+                      {content.pillar2Text}
+                    </p>
+                  ) : null}
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* Family Privacy Note */}
-          <div className="bg-[#F8EDEF]/60 p-6 rounded-2xl border border-[#D7BB91] text-xs text-[#332D2F]/80 leading-relaxed text-center whitespace-pre-line">
-            {content.privacyNote || "Note on Family Privacy: While I love sharing real experiences, our daughters' safety and privacy are paramount. We share practical venue insights and memories while keeping full names, exact school schedules, and personal identifiers private."}
-          </div>
+          {/* Family Privacy Note - Only displayed if not erased */}
+          {privacyNote ? (
+            <div className="bg-[#F8EDEF]/60 p-6 rounded-2xl border border-[#D7BB91] text-xs text-[#332D2F]/80 leading-relaxed text-center whitespace-pre-line">
+              {privacyNote}
+            </div>
+          ) : null}
 
           {/* Primary CTA */}
           <div className="text-center pt-2">

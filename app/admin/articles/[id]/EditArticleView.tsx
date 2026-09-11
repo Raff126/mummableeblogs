@@ -10,6 +10,9 @@ import {
   getInitialMedia,
   saveMedia,
   getDeletedArticleIds,
+  unmarkArticleDeleted,
+  recoverArticle,
+  getArticleByIdOrSlug,
   setGoodToKnowVisibility,
   isGoodToKnowVisibleForArticle,
   loadArticlesFromServer,
@@ -61,6 +64,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
   const [savingAction, setSavingAction] = useState<'draft' | 'publish' | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeletedArticle, setIsDeletedArticle] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -77,13 +81,15 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
     setMediaList(getInitialMedia());
     const effectiveId = getEffectiveArticleId();
     const deleted = getDeletedArticleIds();
-    if (deleted.has(effectiveId)) {
-      setArticle(null);
-      return;
-    }
+
     const allArticles = getInitialArticles();
     const found = allArticles.find((a) => a.id === effectiveId || a.slug === effectiveId) ||
-                  getAllArticles().filter((a) => !deleted.has(a.id) && (!a.slug || !deleted.has(a.slug))).find((a) => a.id === effectiveId || a.slug === effectiveId);
+                  getArticleByIdOrSlug(effectiveId, true) ||
+                  getAllArticles().find((a) => a.id === effectiveId || a.slug === effectiveId);
+
+    const isDel = deleted.has(effectiveId) || (found && (deleted.has(found.id) || (found.slug && deleted.has(found.slug))));
+    setIsDeletedArticle(Boolean(isDel));
+
     if (found) {
       setArticle(found);
       setTitle(found.title);
@@ -101,10 +107,29 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
       setFactBudget(found.quickFacts?.budget || '');
       setFactTimeNeeded(found.quickFacts?.timeNeeded || '');
       setTags((found.tags || []).join(', '));
-      setIsDraft(!!found.isDraft);
+      setIsDraft(Boolean(isDel ? true : found.isDraft));
       setGoodToKnowEnabled(isGoodToKnowVisibleForArticle(found));
+    } else {
+      setArticle(null);
     }
   }, [articleId]);
+
+  const handleRecoverOnly = async () => {
+    if (!article) return;
+    setIsSaving(true);
+    try {
+      await recoverArticle(article.id);
+      unmarkArticleDeleted(article.id);
+      if (article.slug) unmarkArticleDeleted(article.slug);
+      setIsDeletedArticle(false);
+      setMessage('🎉 Article successfully recovered and restored to your active Drafts!');
+      setTimeout(() => setMessage(''), 4000);
+    } catch (err) {
+      setError('Could not recover article. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Handle direct file upload from computer with client-side compression & server upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,7 +266,7 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
         category,
         excerpt: excerpt.trim(),
         content: formatArticleContent(content.trim()) || `<p>${excerpt.trim()}</p>`,
-        featuredImage: featuredImage || targetArticle?.featuredImage || '',
+        featuredImage: featuredImage.trim(),
         imageAlt: targetArticle?.imageAlt || title.trim(),
         imageCaption: imageCaption.trim(),
         readTime: readTime || '4 min read',
@@ -271,6 +296,17 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
       setGoodToKnowVisibility(articleId, Boolean(goodToKnowEnabled));
       if (slug.trim()) {
         setGoodToKnowVisibility(slug.trim(), Boolean(goodToKnowEnabled));
+      }
+
+      // Unmark deletion if article was previously in deleted set
+      if (isDeletedArticle || getDeletedArticleIds().has(articleId)) {
+        unmarkArticleDeleted(articleId);
+        if (cleanSlug) unmarkArticleDeleted(cleanSlug);
+        setIsDeletedArticle(false);
+        try {
+          const { resolveArticleDeletionInHistory } = await import('../../../../data/history');
+          resolveArticleDeletionInHistory(articleId, cleanSlug, cleanTitle);
+        } catch (_) {}
       }
 
       // 2. Save updated article directly to Firestore and localStorage
@@ -304,6 +340,29 @@ export default function EditArticleView({ articleId }: { articleId: string }) {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Recovery Banner if article was deleted */}
+      {isDeletedArticle && (
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-950 animate-fadeIn">
+          <div className="flex items-center gap-2.5 text-xs font-semibold">
+            <span className="text-xl">🗑️</span>
+            <div>
+              <p className="font-bold text-amber-900">This article is currently marked as Deleted.</p>
+              <p className="text-amber-800/80 text-[11px]">
+                You can review the full text, edit any fields, and save or click &ldquo;Recover Now&rdquo; to restore it directly to your active articles.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleRecoverOnly}
+            disabled={isSaving}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+          >
+            ♻️ Recover Now to Drafts
+          </button>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

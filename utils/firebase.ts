@@ -24,16 +24,25 @@ export const getFirebaseAuth = (): Auth | null => {
   }
 };
 
+let anonymousAuthAttempted = false;
+let anonymousAuthDisabled = false;
+
 /** Ensure an active Firebase Auth session so Firestore security rules permit writes */
 export const ensureFirebaseAuth = async (): Promise<boolean> => {
   const auth = getFirebaseAuth();
   if (!auth) return false;
   if (auth.currentUser) return true;
+  if (anonymousAuthDisabled) return false;
+  if (anonymousAuthAttempted) return false;
+
+  anonymousAuthAttempted = true;
   try {
     await signInAnonymously(auth);
     return true;
-  } catch (err) {
-    console.warn('Firebase anonymous sign-in error:', err);
+  } catch (err: any) {
+    if (err?.code === 'auth/admin-restricted-operation') {
+      anonymousAuthDisabled = true;
+    }
     return false;
   }
 };

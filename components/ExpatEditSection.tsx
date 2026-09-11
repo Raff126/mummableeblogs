@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArticleItem, getAllArticles } from '../data/articles';
-import { getInitialArticles, getDeletedArticleIds, loadArticlesFromServer } from '../data/store';
+import { getInitialArticles, getDeletedArticleIds, loadArticlesFromServer, getInitialHomepage, DEFAULT_HOMEPAGE, HomepageContent, STORAGE_KEYS } from '../data/store';
 
 interface ExpatGuideCard {
   id: string;
@@ -87,12 +87,13 @@ function articleToCard(article: ArticleItem, index: number): ExpatGuideCard {
   const rawBadge = article.subcategory || (article.tags && article.tags[0]) || defaultMatch?.badge || 'EXPAT ESSENTIALS';
   const badge = rawBadge.toUpperCase();
 
-  const image =
-    article.featuredImage ||
-    article.heroImage ||
-    article.thumbnailImage ||
-    defaultMatch?.image ||
-    'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&fit=crop&q=80';
+  const isImageErased = article.featuredImage !== undefined && article.featuredImage.trim() === '';
+  const image = isImageErased
+    ? ''
+    : (article.featuredImage ||
+       article.heroImage ||
+       article.thumbnailImage ||
+       (defaultMatch?.image || ''));
 
   const readTime = article.readTime || defaultMatch?.readTime || '4 min read';
   const bgColor = defaultMatch?.bgColor || BADGE_COLORS[index % BADGE_COLORS.length];
@@ -165,6 +166,7 @@ function resolveExpatCards(allArticles: ArticleItem[], deleted: Set<string>): Ex
 }
 
 export default function ExpatEditSection() {
+  const [hpContent, setHpContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE);
   const [cards, setCards] = useState<ExpatGuideCard[]>(() => {
     const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
@@ -173,6 +175,9 @@ export default function ExpatEditSection() {
   });
 
   const refreshCards = async () => {
+    const localHp = getInitialHomepage();
+    setHpContent(localHp);
+
     const deleted = getDeletedArticleIds();
     const local = getInitialArticles();
     const all = local.length > 0 ? local : getAllArticles();
@@ -189,6 +194,14 @@ export default function ExpatEditSection() {
         const curDeleted = getDeletedArticleIds();
         const serverCards = resolveExpatCards(serverArticles, curDeleted);
         setCards(serverCards);
+      }
+    } catch (_) {}
+
+    try {
+      const { fetchHomepageFromFirestore } = await import('../utils/firestoreSettings');
+      const fsHp = await fetchHomepageFromFirestore();
+      if (fsHp && typeof fsHp === 'object') {
+        setHpContent((prev) => ({ ...prev, ...fsHp }));
       }
     } catch (_) {}
   };
@@ -208,6 +221,10 @@ export default function ExpatEditSection() {
     };
   }, []);
 
+  const eyebrow = hpContent.expatEyebrow !== undefined ? hpContent.expatEyebrow.trim() : (DEFAULT_HOMEPAGE.expatEyebrow || 'CURATED ESSENTIALS FOR UAE FAMILIES');
+  const headline = hpContent.expatHeadline !== undefined ? hpContent.expatHeadline.trim() : (DEFAULT_HOMEPAGE.expatHeadline || 'The Expat Edit');
+  const description = hpContent.expatDescription !== undefined ? hpContent.expatDescription.trim() : (DEFAULT_HOMEPAGE.expatDescription || 'Practical guides, school choices & community wisdom for raising kids in the Emirates');
+
   // If no published cards exist, hide section
   if (cards.length === 0) {
     return null;
@@ -217,26 +234,34 @@ export default function ExpatEditSection() {
     <section id="expat-edit" className="py-16 sm:py-20 bg-[#F8EDEF]/40 border-b border-gray-100">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-          <div>
-            <span className="text-[11px] font-sans font-bold tracking-widest text-[#B75B70] uppercase block mb-1">
-              CURATED ESSENTIALS FOR UAE FAMILIES
-            </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#683846]">
-              The Expat Edit
-            </h2>
-            <p className="text-xs sm:text-sm text-[#332D2F]/80 font-sans mt-1">
-              Practical guides, school choices &amp; community wisdom for raising kids in the Emirates
-            </p>
+        {(eyebrow || headline || description) && (
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <div>
+              {eyebrow ? (
+                <span className="text-[11px] font-sans font-bold tracking-widest text-[#B75B70] uppercase block mb-1">
+                  {eyebrow}
+                </span>
+              ) : null}
+              {headline ? (
+                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#683846]">
+                  {headline}
+                </h2>
+              ) : null}
+              {description ? (
+                <p className="text-xs sm:text-sm text-[#332D2F]/80 font-sans mt-1">
+                  {description}
+                </p>
+              ) : null}
+            </div>
+            <Link
+              href="/the-expat-edit"
+              className="text-xs font-bold tracking-wider text-[#B75B70] hover:text-[#683846] transition-colors uppercase self-start sm:self-auto inline-flex items-center gap-1"
+            >
+              <span>View All Expat Guides</span>
+              <span>→</span>
+            </Link>
           </div>
-          <Link
-            href="/the-expat-edit"
-            className="text-xs font-bold tracking-wider text-[#B75B70] hover:text-[#683846] transition-colors uppercase self-start sm:self-auto inline-flex items-center gap-1"
-          >
-            <span>View All Expat Guides</span>
-            <span>→</span>
-          </Link>
-        </div>
+        )}
 
         {/* Dynamic Published Expat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -249,13 +274,27 @@ export default function ExpatEditSection() {
               >
                 {/* Image Container */}
                 <div className="relative h-48 overflow-hidden bg-gray-100">
-                  <img
-                    src={card.image}
-                    alt={card.title}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/images/mama-logo.png'; }}
-                  />
+                  {card.image && card.image.trim() ? (
+                    <img
+                      src={card.image}
+                      alt={card.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/images/mama-logo.png';
+                        target.className = 'w-full h-full object-contain p-8 opacity-60';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#F8EDEF] to-[#F3E2E6] p-4 text-center">
+                      <img
+                        src="/images/mama-logo.png"
+                        alt="MummaBee logo"
+                        className="w-14 h-14 object-contain opacity-75"
+                      />
+                    </div>
+                  )}
                   <span className={`absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white px-3 py-1 rounded-full shadow-xs ${card.bgColor}`}>
                     {card.badge}
                   </span>

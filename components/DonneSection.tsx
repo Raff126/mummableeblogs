@@ -18,15 +18,17 @@ export default function DonneSection() {
     setImgSrc(resolvedImage);
 
     // 1. Query live Firestore first (cross-device cloud sync)
+    let firestoreLoaded = false;
     try {
       const { fetchHomepageFromFirestore } = await import('../utils/firestoreSettings');
       const fsData = await fetchHomepageFromFirestore();
-      if (fsData && typeof fsData === 'object' && (fsData.donneHeadline || fsData.donneImage)) {
+      if (fsData && typeof fsData === 'object' && Object.keys(fsData).length > 0) {
+        firestoreLoaded = true;
         setContent((prev) => {
           if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
             return prev;
           }
-          const merged = { ...prev, ...fsData };
+          const merged = { ...DEFAULT_HOMEPAGE, ...prev, ...fsData };
           if (fsData.donneImage) {
             setImgSrc(fsData.donneImage);
           }
@@ -39,24 +41,26 @@ export default function DonneSection() {
       }
     } catch (_) {}
 
-    // 2. Fetch fresh homepage data from server or static json without destructive overwriting
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data === 'object') {
-          setContent((prev) => {
-            const merged = { ...data, ...prev };
-            const effectiveImage = merged.donneImage || resolvedImage;
-            if (effectiveImage) {
-              setImgSrc(effectiveImage);
-            }
-            return merged;
-          });
-        }
-      })
-      .catch(() => {});
+    // 2. Fetch fresh homepage data from server or static json without destructive overwriting only if Firestore didn't load
+    if (!firestoreLoaded) {
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const endpoint = isLocal ? `/api/homepage/?t=${Date.now()}` : `/data/homepage.json?t=${Date.now()}`;
+      fetch(endpoint, { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && typeof data === 'object') {
+            setContent((prev) => {
+              const merged = { ...data, ...prev };
+              const effectiveImage = merged.donneImage || resolvedImage;
+              if (effectiveImage) {
+                setImgSrc(effectiveImage);
+              }
+              return merged;
+            });
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   useEffect(() => {
@@ -91,18 +95,28 @@ export default function DonneSection() {
           {/* Circular Photo */}
           <div className="md:col-span-5 flex justify-center">
             <div className="relative w-52 h-52 sm:w-60 sm:h-60 rounded-full p-2 bg-white shadow-soft border-2 border-[#B75B70]/20">
-              <img
-                key={imgSrc || 'default-donne-img'}
-                src={imgSrc || content.donneImage || '/uploads/donne_about_us-1787911839557.jpg'}
-                alt="Donne - the mum behind MummaBeeBlog"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (!target.src.includes('mama-logo.png')) {
-                    target.src = '/images/mama-logo.png';
-                  }
-                }}
-                className="w-full h-full object-cover rounded-full"
-              />
+              {(content.donneImage !== undefined && content.donneImage.trim() === '') ? (
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#F8EDEF] to-[#F3E2E6] flex items-center justify-center p-8">
+                  <img
+                    src="/images/mama-logo.png"
+                    alt="MummaBee logo"
+                    className="w-24 h-24 sm:w-28 sm:h-28 object-contain opacity-85"
+                  />
+                </div>
+              ) : (
+                <img
+                  key={imgSrc || 'default-donne-img'}
+                  src={imgSrc || content.donneImage || '/uploads/donne_about_us-1787911839557.jpg'}
+                  alt="Donne - the mum behind MummaBeeBlog"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('mama-logo.png')) {
+                      target.src = '/images/mama-logo.png';
+                    }
+                  }}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              )}
               {/* Overlapping Badge */}
               <div className="absolute bottom-1 right-1 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white p-1 shadow-md flex items-center justify-center border border-gray-100">
                 <img
@@ -120,13 +134,19 @@ export default function DonneSection() {
               THE MUM BEHIND THE GUIDES
             </span>
 
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#683846]">
-              {content.donneHeadline || "Hi, I'm Donne."}
-            </h2>
+            {/* Only render headline if user hasn't explicitly cleared it */}
+            {(content.donneHeadline !== undefined ? content.donneHeadline.trim() : DEFAULT_HOMEPAGE.donneHeadline) ? (
+              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#683846]">
+                {content.donneHeadline !== undefined ? content.donneHeadline : DEFAULT_HOMEPAGE.donneHeadline}
+              </h2>
+            ) : null}
 
-            <p className="font-sans text-sm sm:text-base text-[#332D2F] leading-relaxed max-w-xl">
-              {content.donneDescription || "I'm a South African mum living in the UAE with my husband and two daughters. MummaBeeBlog is where I share real, tested family guides — from weekend days out in Dubai to road trips across the Emirates, honest dining reviews, and the everyday adventures of raising kids in the desert."}
-            </p>
+            {/* Only render description if user hasn't explicitly cleared it */}
+            {(content.donneDescription !== undefined ? content.donneDescription.trim() : DEFAULT_HOMEPAGE.donneDescription) ? (
+              <p className="font-sans text-sm sm:text-base text-[#332D2F] leading-relaxed max-w-xl">
+                {content.donneDescription !== undefined ? content.donneDescription : DEFAULT_HOMEPAGE.donneDescription}
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2">
               <Link

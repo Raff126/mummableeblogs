@@ -10,6 +10,7 @@ import ExpatEditSection from './ExpatEditSection';
 import CredibilitySection from './CredibilitySection';
 import InstagramSection from './InstagramSection';
 import DiscountCodesSection from './DiscountCodesSection';
+import GiveawaySection from './GiveawaySection';
 import NewsletterBand from './NewsletterBand';
 
 export default function HomePageView() {
@@ -45,7 +46,10 @@ export default function HomePageView() {
       {/* 10. DISCOUNT CODES & EXCLUSIVE DEALS */}
       <DiscountCodesSection placement="homepage" />
 
-      {/* 11. NEWSLETTER */}
+      {/* 11. MUMMABEE GIVEAWAY CAMPAIGN */}
+      <GiveawaySection placement="homepage" />
+
+      {/* 12. NEWSLETTER */}
       <NewsletterBand />
     </>
   );

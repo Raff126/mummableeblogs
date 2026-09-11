@@ -30,6 +30,7 @@ const ALL_ADMIN_NAV: NavItem[] = [
   { label: 'About Page Editor', path: '/admin/about', icon: '👩‍👧‍👧', adminOnly: false },
   { label: 'Work With Us Editor', path: '/admin/work-with-us', icon: '🤝', adminOnly: false },
   { label: 'Discount Codes', path: '/admin/deals', icon: '🏷️', adminOnly: false },
+  { label: 'Giveaways', path: '/admin/giveaway', icon: '🎁', adminOnly: false },
   { label: 'Site Pages', path: '/admin/pages', icon: '📄', adminOnly: false },
   { label: 'Subscribers', path: '/admin/subscribers', icon: '💌', adminOnly: false },
   { label: 'Inquiries', path: '/admin/inquiries', icon: '📬', adminOnly: false },
@@ -107,7 +108,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!pathname) return false;
     const cleanCurrent = pathname.replace(/\/$/, '');
     const cleanItem = itemPath.replace(/\/$/, '');
-    return cleanCurrent === cleanItem;
+    if (cleanCurrent === cleanItem) return true;
+    if (cleanItem === '/admin/articles' && cleanCurrent.startsWith('/admin/articles/') && !cleanCurrent.endsWith('/new')) {
+      return true;
+    }
+    return false;
   };
 
   // Route Guard: If an Assistant attempts to navigate directly to Admin-only URLs

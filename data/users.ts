@@ -39,13 +39,18 @@ export const DEFAULT_USERS: UserAccount[] = [
     authMethod: 'both',
     passwordHash: 'MummaBee2026!',
   },
+  {
+    id: 'usr-assistant-demo',
+    name: 'Editorial Assistant',
+    email: 'assistant@mummabeeblog.com',
+    role: 'Assistant',
+    status: 'Active',
+    createdAt: '2026-08-01T00:00:00Z',
+    lastLogin: '2026-09-06T12:37:00Z',
+    authMethod: 'password',
+    passwordHash: 'Assistant2026!',
+  },
 ];
-
-const LEGACY_EMAILS_TO_REMOVE = new Set([
-  'raffyolaivar25@gmail.com',
-  'olaivarkathrine@gmail.com',
-  'assistant@mummabeeblog.com',
-]);
 
 // Read user list from localStorage with fallback to default seed
 export function getUsersList(): UserAccount[] {
@@ -55,7 +60,7 @@ export function getUsersList(): UserAccount[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Filter out legacy removed test emails and migrate any Artist to Assistant
+        // Migrate any Artist to Assistant
         const filtered = parsed
           .map((u: UserAccount) => {
             if ((u.role as any) === 'Artist') {
@@ -63,9 +68,7 @@ export function getUsersList(): UserAccount[] {
             }
             return u;
           })
-          .filter(
-            (u: UserAccount) => u?.email && !LEGACY_EMAILS_TO_REMOVE.has(u.email.trim().toLowerCase())
-          );
+          .filter((u: UserAccount) => u?.email && typeof u.email === 'string');
 
         // Ensure Donne is always present
         const hasDonne = filtered.some(
@@ -77,7 +80,6 @@ export function getUsersList(): UserAccount[] {
           finalUsers = [DEFAULT_USERS[0], ...filtered];
         }
 
-        // If changes were made, persist the cleaned list
         if (finalUsers.length !== parsed.length || !hasDonne) {
           localStorage.setItem(USER_STORAGE_KEYS.USERS, JSON.stringify(finalUsers));
         }
@@ -99,9 +101,66 @@ export function saveUsersList(users: UserAccount[]): void {
   try {
     localStorage.setItem(USER_STORAGE_KEYS.USERS, JSON.stringify(users));
     window.dispatchEvent(new CustomEvent('mummabee_users_updated', { detail: users }));
+
+    // Persist to Cloud Firestore in the background
+    import('../utils/firestoreSettings')
+      .then(({ saveUsersToFirestore }) => {
+        saveUsersToFirestore(users).catch((err) => {
+          console.warn('Background saveUsersToFirestore failed:', err);
+        });
+      })
+      .catch(() => {});
   } catch (err) {
     console.error('Failed to save users list:', err);
   }
+}
+
+// Pull latest user accounts from Cloud Firestore and merge into localStorage
+export async function syncUsersFromFirestore(): Promise<UserAccount[]> {
+  if (typeof window === 'undefined') return DEFAULT_USERS;
+  try {
+    const { fetchUsersFromFirestore } = await import('../utils/firestoreSettings');
+    const remoteUsers = await fetchUsersFromFirestore();
+    if (remoteUsers && Array.isArray(remoteUsers) && remoteUsers.length > 0) {
+      const localUsers = getUsersList();
+      const userMap = new Map<string, UserAccount>();
+
+      // Seed Donne first
+      userMap.set('donne@mummabeeblog.com', DEFAULT_USERS[0]);
+
+      // Add local users
+      for (const u of localUsers) {
+        if (u && u.email) {
+          userMap.set(u.email.trim().toLowerCase(), u);
+        }
+      }
+
+      // Merge remote users
+      for (const ru of remoteUsers) {
+        if (ru && ru.email) {
+          const cleanEmail = ru.email.trim().toLowerCase();
+          const existing = userMap.get(cleanEmail);
+          if (!existing) {
+            userMap.set(cleanEmail, ru);
+          } else {
+            userMap.set(cleanEmail, {
+              ...existing,
+              ...ru,
+              passwordHash: ru.passwordHash || existing.passwordHash,
+            });
+          }
+        }
+      }
+
+      const merged = Array.from(userMap.values());
+      localStorage.setItem(USER_STORAGE_KEYS.USERS, JSON.stringify(merged));
+      window.dispatchEvent(new CustomEvent('mummabee_users_updated', { detail: merged }));
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Error syncing users from Firestore:', err);
+  }
+  return getUsersList();
 }
 
 // Find user by email (case-insensitive)
@@ -130,22 +189,7 @@ export function getCurrentUser(): CurrentSessionUser | null {
     const raw = localStorage.getItem(USER_STORAGE_KEYS.CURRENT_USER);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && parsed.email) {
-        const cleanEmail = parsed.email.trim().toLowerCase();
-        // If the stored session was an old removed test user, switch session to Donne
-        if (LEGACY_EMAILS_TO_REMOVE.has(cleanEmail)) {
-          const donneAdmin: CurrentSessionUser = {
-            id: 'usr-admin-donne',
-            name: 'Donne (Mumma Bee)',
-            email: 'donne@mummabeeblog.com',
-            role: 'Admin',
-            authMethod: 'password',
-          };
-          setCurrentUser(donneAdmin);
-          return donneAdmin;
-        }
         return parsed as CurrentSessionUser;
-      }
     }
   } catch (_) {}
 
@@ -218,6 +262,10 @@ export function createUser(userData: {
     return { success: false, error: 'Please provide a valid email address.' };
   }
 
+  if (!userData.password || userData.password.trim().length < 6) {
+    return { success: false, error: 'Password is required and must be at least 6 characters.' };
+  }
+
   const existing = findUserByEmail(cleanEmail);
   if (existing) {
     return { success: false, error: `A user with email "${cleanEmail}" already exists.` };
@@ -230,8 +278,8 @@ export function createUser(userData: {
     role: userData.role,
     status: 'Active',
     createdAt: new Date().toISOString(),
-    authMethod: userData.authMethod || (userData.password ? 'password' : 'google'),
-    passwordHash: userData.password ? userData.password.trim() : undefined,
+    authMethod: userData.authMethod || 'password',
+    passwordHash: userData.password.trim(),
   };
 
   const users = getUsersList();

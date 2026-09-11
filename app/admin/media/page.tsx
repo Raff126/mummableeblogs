@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getInitialMedia, saveMedia, MediaItem } from '../../../data/store';
+import {
+  getInitialMedia,
+  saveMedia,
+  deleteMediaItem,
+  getDeletedMediaIds,
+  markMediaDeleted,
+  fetchMediaFromFirestore,
+  STORAGE_KEYS,
+  MediaItem,
+} from '../../../data/store';
 import { compressImage } from '../../../utils/imageCompressor';
 
 export default function AdminMediaPage() {
@@ -13,6 +22,8 @@ export default function AdminMediaPage() {
   const [dragOver, setDragOver] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -22,6 +33,36 @@ export default function AdminMediaPage() {
     } catch (e) {
       setMediaList([]);
     }
+
+    // Background sync from Firestore
+    fetchMediaFromFirestore()
+      .then((cloudMedia) => {
+        if (cloudMedia) {
+          if (cloudMedia.deletedIds && cloudMedia.deletedIds.length > 0) {
+            cloudMedia.deletedIds.forEach((id) => markMediaDeleted(id));
+          }
+          const deleted = getDeletedMediaIds();
+          const currentLocal = getInitialMedia();
+          const map = new Map<string, MediaItem>();
+
+          (cloudMedia.items || []).forEach((item) => {
+            if (!deleted.has(item.id) && !deleted.has(item.url)) {
+              map.set(item.id, item);
+            }
+          });
+          currentLocal.forEach((item) => {
+            if (!deleted.has(item.id) && !deleted.has(item.url)) {
+              map.set(item.id, item);
+            }
+          });
+          const merged = Array.from(map.values()).slice(0, 30);
+          setMediaList(merged);
+          try {
+            localStorage.setItem(STORAGE_KEYS.MEDIA, JSON.stringify(merged));
+          } catch (_) {}
+        }
+      })
+      .catch((e) => console.warn('Cloud media sync:', e));
   }, []);
 
   const processAndAddFile = async (fileOrDataUrl: File | string, filenameHint?: string) => {
@@ -68,7 +109,7 @@ export default function AdminMediaPage() {
 
       const updated = [newItem, ...mediaList.filter((m) => m.url !== finalUrl)].slice(0, 30);
       setMediaList(updated);
-      saveMedia(updated);
+      saveMedia(updated).catch((err) => console.warn('Save media error:', err));
       setMessage('Image uploaded, optimized, and saved to Media Library!');
       setTimeout(() => setMessage(''), 3500);
     } catch (err: any) {
@@ -137,22 +178,37 @@ export default function AdminMediaPage() {
       dimensions: '1200x800',
     };
 
-    const updated = [newItem, ...mediaList].slice(0, 25);
+    const updated = [newItem, ...mediaList].slice(0, 30);
     setMediaList(updated);
-    saveMedia(updated);
+    saveMedia(updated).catch((err) => console.warn('Save media error:', err));
     setNewUrl('');
     setNewFilename('');
     setMessage('Image link added to Media Library successfully!');
     setTimeout(() => setMessage(''), 3000);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Delete this image from Media Library?')) {
-      const updated = mediaList.filter((m) => m.id !== id);
-      setMediaList(updated);
-      saveMedia(updated);
-      setMessage('Image removed from library.');
-      setTimeout(() => setMessage(''), 3000);
+  const handleDelete = (id: string, url?: string, filename?: string) => {
+    // 1. Optimistically and instantly remove from local state
+    setMediaList((prev) => prev.filter((m) => m.id !== id && (!url || m.url !== url)));
+    setConfirmDeleteId(null);
+    setMessage(`"${filename || 'Image'}" deleted from Media Library.`);
+    setTimeout(() => setMessage(''), 3500);
+
+    // 2. Persist deletion in background
+    deleteMediaItem(id, url).catch((err: any) => {
+      console.error('Delete failed:', err);
+    });
+  };
+
+  const copyToClipboard = (item: MediaItem) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(item.url);
+      setCopiedId(item.id);
+      setMessage(`Copied link for "${item.filename}" to clipboard!`);
+      setTimeout(() => {
+        setCopiedId(null);
+        setMessage('');
+      }, 3000);
     }
   };
 
@@ -170,7 +226,7 @@ export default function AdminMediaPage() {
       </div>
 
       {message && (
-        <div className="bg-green-50 text-green-800 text-xs font-semibold p-3.5 rounded-xl border border-green-200 shadow-2xs">
+        <div className="bg-green-50 text-green-800 text-xs font-semibold p-3.5 rounded-xl border border-green-200 shadow-2xs animate-fadeIn">
           ✨ {message}
         </div>
       )}
@@ -261,7 +317,7 @@ export default function AdminMediaPage() {
               All Media Items ({mediaList.length})
             </h2>
             <p className="text-xs text-[#332D2F]/60">
-              Click any image to copy its URL or select it when editing pages & articles.
+              Copy image links or delete unwanted items permanently.
             </p>
           </div>
           <input
@@ -279,12 +335,42 @@ export default function AdminMediaPage() {
             <p className="text-xs">No media items found matching your search.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredMedia.map((item) => (
               <div
                 key={item.id}
                 className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex flex-col shadow-2xs hover:shadow-soft transition-all"
               >
+                {/* Full-Card Confirmation Prompt Overlay */}
+                {confirmDeleteId === item.id && (
+                  <div className="absolute inset-0 z-30 bg-rose-950/90 backdrop-blur-xs p-4 flex flex-col items-center justify-center text-center text-white space-y-2.5 animate-fadeIn">
+                    <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-2xl shadow-inner">
+                      🗑️
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">Delete photo?</p>
+                      <p className="text-[11px] text-white/80 line-clamp-1 max-w-[170px] mt-0.5 font-medium">{item.filename}</p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1.5 w-full justify-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.id, item.url, item.filename)}
+                        className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        <span>Yes, Delete</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Image Preview Box */}
                 <div className="aspect-square relative overflow-hidden bg-[#F8EDEF]">
                   <img
                     src={item.url}
@@ -294,23 +380,20 @@ export default function AdminMediaPage() {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
+                  {/* Hover overlay shortcut */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(item.url);
-                        setMessage(`Copied image link for "${item.filename}" to clipboard!`);
-                        setTimeout(() => setMessage(''), 3000);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-white text-[#683846] text-xs font-bold shadow-sm hover:bg-[#F8EDEF] transition-colors"
+                      onClick={() => copyToClipboard(item)}
+                      className="px-3 py-1.5 rounded-lg bg-white text-[#683846] text-xs font-bold shadow-sm hover:bg-[#F8EDEF] transition-colors cursor-pointer"
                       title="Copy URL"
                     >
-                      Copy URL
+                      {copiedId === item.id ? '✓ Copied' : 'Copy URL'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(item.id)}
-                      className="p-1.5 rounded-lg bg-red-600 text-white text-xs font-bold shadow-sm hover:bg-red-700 transition-colors"
+                      onClick={() => setConfirmDeleteId(item.id)}
+                      className="p-1.5 rounded-lg bg-red-600 text-white text-xs font-bold shadow-sm hover:bg-red-700 transition-colors cursor-pointer"
                       title="Delete Image"
                     >
                       🗑️
@@ -318,13 +401,39 @@ export default function AdminMediaPage() {
                   </div>
                 </div>
 
-                <div className="p-3 bg-white space-y-1">
-                  <p className="text-xs font-bold text-[#683846] truncate" title={item.filename}>
-                    {item.filename}
-                  </p>
-                  <p className="text-[10px] text-[#332D2F]/60">
-                    {item.uploadDate}
-                  </p>
+                {/* Metadata & Actions */}
+                <div className="p-3 bg-white space-y-2.5 flex-1 flex flex-col justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-[#683846] truncate" title={item.filename}>
+                      {item.filename}
+                    </p>
+                    <p className="text-[10px] text-[#332D2F]/60">
+                      {item.uploadDate} {item.dimensions ? `• ${item.dimensions}` : ''}
+                    </p>
+                  </div>
+
+                  {/* Always-Visible Action Bar */}
+                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(item)}
+                      className="text-[11px] font-semibold text-[#683846] hover:text-[#B75B70] px-2 py-1 rounded-md hover:bg-[#F8EDEF] transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Copy link to clipboard"
+                    >
+                      <span>{copiedId === item.id ? '✓' : '📋'}</span>
+                      <span>{copiedId === item.id ? 'Copied' : 'Copy'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(item.id)}
+                      className="text-[11px] font-semibold text-red-600 hover:text-red-700 px-2 py-1 rounded-md hover:bg-red-50 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Delete image permanently"
+                    >
+                      <span>🗑️</span>
+                      <span>Delete</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -10,6 +10,7 @@ import {
   resetUserPassword,
   getCurrentUser,
   isAdmin,
+  syncUsersFromFirestore,
   UserAccount,
   UserRole,
 } from '../../../data/users';
@@ -44,6 +45,9 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     loadData();
+    syncUsersFromFirestore()
+      .then(() => loadData())
+      .catch(() => {});
 
     const handleUpdate = () => loadData();
     window.addEventListener('mummabee_users_updated', handleUpdate);
@@ -100,6 +104,10 @@ export default function AdminUsersPage() {
       setErrorMessage('Please enter a valid email address.');
       return;
     }
+    if (!password || password.trim().length < 6) {
+      setErrorMessage('Please provide a password with at least 6 characters.');
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -107,7 +115,7 @@ export default function AdminUsersPage() {
       name: name.trim(),
       email: email.trim(),
       role,
-      password: password ? password.trim() : undefined,
+      password: password.trim(),
     });
 
     setIsSubmitting(false);
@@ -268,7 +276,9 @@ export default function AdminUsersPage() {
           <div>
             <input
               type="password"
-              placeholder="Password"
+              required
+              minLength={6}
+              placeholder="Password (min. 6 characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3.5 bg-white border border-[#B75B70]/25 rounded-xl text-sm text-[#332D2F] placeholder-stone-400 focus:outline-none focus:border-[#683846] focus:ring-1 focus:ring-[#683846] transition-all"

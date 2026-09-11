@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isAuthenticated, loginWithFirebase } from '../../../data/store';
+import { syncUsersFromFirestore } from '../../../data/users';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -17,6 +18,8 @@ export default function AdminLoginPage() {
   useEffect(() => {
     if (isAuthenticated()) {
       router.push('/admin');
+    } else {
+      syncUsersFromFirestore().catch(() => {});
     }
   }, [router]);
 

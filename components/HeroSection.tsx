@@ -16,12 +16,12 @@ export default function HeroSection() {
     try {
       const { fetchHomepageFromFirestore } = await import('../utils/firestoreSettings');
       const fsData = await fetchHomepageFromFirestore();
-      if (fsData && typeof fsData === 'object' && (fsData.heroHeadline || fsData.heroImage)) {
+      if (fsData && typeof fsData === 'object' && Object.keys(fsData).length > 0) {
         setContent((prev) => {
           if (prev.updatedAt && fsData.updatedAt && prev.updatedAt > fsData.updatedAt) {
             return prev;
           }
-          const merged = { ...prev, ...fsData };
+          const merged = { ...DEFAULT_HOMEPAGE, ...prev, ...fsData };
           try {
             localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(merged));
           } catch (_) {}
@@ -67,18 +67,20 @@ export default function HeroSection() {
     };
   }, []);
 
-  const headline = content.heroHeadline || DEFAULT_HOMEPAGE.heroHeadline;
-  const isDefaultHeadline = !headline || headline.trim() === 'Your guide to family life in the UAE.' || headline.includes('family life');
+  const eyebrow = content.heroEyebrow !== undefined ? content.heroEyebrow : (DEFAULT_HOMEPAGE.heroEyebrow || 'UAE FAMILY LIFE • FOOD • TRAVEL • ACTIVITIES');
+  const headline = content.heroHeadline !== undefined ? content.heroHeadline : DEFAULT_HOMEPAGE.heroHeadline;
+  const isDefaultHeadline = headline && (headline.trim() === 'Your guide to family life in the UAE.' || headline.trim() === 'Your guide to family life in the UAE');
+  const description = content.heroDescription !== undefined ? content.heroDescription : (DEFAULT_HOMEPAGE.heroDescription || 'Discover family-friendly places, practical guides, honest recommendations and real experiences between Dubai and Abu Dhabi.');
 
   return (
     <section className="relative bg-[#F8EDEF] overflow-hidden py-10 sm:py-14 lg:py-20 border-b border-[#B75B70]/15">
       {/* Signature Ambient Blush Circles */}
       <div 
-        aria-hidden="true"
+        aria-hidden="true" 
         className="absolute -bottom-24 -left-24 w-88 h-88 sm:w-96 sm:h-96 bg-[#EAD4D0]/80 rounded-full pointer-events-none" 
       />
       <div 
-        aria-hidden="true"
+        aria-hidden="true" 
         className="absolute -top-20 -right-20 w-80 h-80 sm:w-96 sm:h-96 bg-white/50 rounded-full pointer-events-none" 
       />
 
@@ -88,25 +90,29 @@ export default function HeroSection() {
           {/* Left Column: Editorial Typography, CTAs & Proof Stats */}
           <div className="lg:col-span-7 space-y-4 sm:space-y-5 text-left">
             {/* Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-[#B75B70]/20 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-[#B75B70]" />
-              <span className="text-[10px] sm:text-[11px] font-sans font-bold tracking-widest text-[#B75B70] uppercase">
-                {content.heroEyebrow || 'UAE FAMILY LIFE • FOOD • TRAVEL • ACTIVITIES'}
-              </span>
-            </div>
+            {eyebrow.trim() ? (
+              <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-[#B75B70]/20 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-[#B75B70]" />
+                <span className="text-[10px] sm:text-[11px] font-sans font-bold tracking-widest text-[#B75B70] uppercase">
+                  {eyebrow}
+                </span>
+              </div>
+            ) : null}
 
             {/* Signature Headline */}
-            <h1 className="font-serif text-3xl sm:text-5xl lg:text-[54px] xl:text-[58px] font-bold text-[#683846] leading-[1.14] tracking-tight">
-              {isDefaultHeadline ? (
-                <>
-                  Your guide to<br />
-                  <span className="font-serif italic font-normal text-[#B75B70]">family life</span><br />
-                  in the UAE.
-                </>
-              ) : (
-                <span>{headline}</span>
-              )}
-            </h1>
+            {headline.trim() ? (
+              <h1 className="font-serif text-3xl sm:text-5xl lg:text-[54px] xl:text-[58px] font-bold text-[#683846] leading-[1.14] tracking-tight">
+                {isDefaultHeadline ? (
+                  <>
+                    Your guide to<br />
+                    <span className="font-serif italic font-normal text-[#B75B70]">family life</span><br />
+                    in the UAE.
+                  </>
+                ) : (
+                  <span className="whitespace-pre-line">{headline}</span>
+                )}
+              </h1>
+            ) : null}
 
             {/* Sub-badge: Dubai & Abu Dhabi • Honest Family Recommendations */}
             <div className="flex items-center gap-2 text-xs sm:text-[13px] font-medium text-[#B75B70]">
@@ -117,10 +123,11 @@ export default function HeroSection() {
             </div>
 
             {/* Supporting Description */}
-            <p className="font-sans text-xs sm:text-sm md:text-[15px] text-[#332D2F]/80 leading-relaxed max-w-lg font-normal">
-              {content.heroDescription ||
-                'Discover family-friendly places, practical guides, honest recommendations and real experiences between Dubai and Abu Dhabi.'}
-            </p>
+            {description.trim() ? (
+              <p className="font-sans text-xs sm:text-sm md:text-[15px] text-[#332D2F]/80 leading-relaxed max-w-lg font-normal">
+                {description}
+              </p>
+            ) : null}
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1 w-full sm:w-auto">
@@ -143,23 +150,29 @@ export default function HeroSection() {
             {/* 3-Column Proof Stats Strip */}
             <div className="pt-4 flex items-center gap-6 sm:gap-10 border-t border-[#B75B70]/15">
               <div>
-                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">100+</div>
+                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
+                  {content.heroStat1Number || DEFAULT_HOMEPAGE.heroStat1Number || '100+'}
+                </div>
                 <div className="text-[10px] sm:text-[11px] font-sans font-bold tracking-wider text-[#332D2F]/60 uppercase mt-0.5">
-                  TESTED GUIDES
+                  {content.heroStat1Label || DEFAULT_HOMEPAGE.heroStat1Label || 'TESTED GUIDES'}
                 </div>
               </div>
               <div className="w-px h-8 bg-[#B75B70]/15 hidden sm:block" />
               <div>
-                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">2 Cities</div>
+                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
+                  {content.heroStat2Number || DEFAULT_HOMEPAGE.heroStat2Number || '2 Cities'}
+                </div>
                 <div className="text-[10px] sm:text-[11px] font-sans font-bold tracking-wider text-[#332D2F]/60 uppercase mt-0.5">
-                  DUBAI &amp; ABU DHABI
+                  {content.heroStat2Label || DEFAULT_HOMEPAGE.heroStat2Label || 'DUBAI & ABU DHABI'}
                 </div>
               </div>
               <div className="w-px h-8 bg-[#B75B70]/15 hidden sm:block" />
               <div>
-                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">100%</div>
+                <div className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
+                  {content.heroStat3Number || DEFAULT_HOMEPAGE.heroStat3Number || '100%'}
+                </div>
                 <div className="text-[10px] sm:text-[11px] font-sans font-bold tracking-wider text-[#332D2F]/60 uppercase mt-0.5">
-                  HONEST REVIEWS
+                  {content.heroStat3Label || DEFAULT_HOMEPAGE.heroStat3Label || 'HONEST REVIEWS'}
                 </div>
               </div>
             </div>
@@ -251,19 +264,35 @@ export default function HeroSection() {
 
               {/* Main Arched Frame */}
               <div 
-                className="relative aspect-[4/5] w-full rounded-t-[150px] sm:rounded-t-[180px] rounded-b-[36px] sm:rounded-b-[44px] overflow-hidden bg-white shadow-[0_20px_50px_rgba(104,56,70,0.18)] border-6 sm:border-8 border-white group"
+                className="relative aspect-[4/5] w-full rounded-t-[150px] sm:rounded-t-[180px] rounded-b-[36px] sm:rounded-b-[44px] overflow-hidden bg-[#F8EDEF] shadow-[0_20px_50px_rgba(104,56,70,0.18)] border-6 sm:border-8 border-white group"
               >
-                <img
-                  src={content.heroImage || "/images/358792494_661391199240576_3424351230899219709_n.jpg"}
-                  alt="Donne and her daughters in the UAE"
-                  fetchPriority="high"
-                  loading="eager"
-                  decoding="async"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/images/358792494_661391199240576_3424351230899219709_n.jpg";
-                  }}
-                  className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-700 ease-out"
-                />
+                {(content.heroImage !== undefined && content.heroImage.trim() === '') ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#F8EDEF] to-[#F3E2E6] p-8 text-center">
+                    <img
+                      src="/images/mama-logo.png"
+                      alt="MummaBee logo"
+                      className="w-24 h-24 sm:w-32 sm:h-32 object-contain opacity-80 group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="text-xs font-serif font-bold text-[#683846] mt-4 tracking-wide">
+                      MummaBeeBlog
+                    </span>
+                  </div>
+                ) : (
+                  <img
+                    key={content.heroImage || 'hero-img'}
+                    src={content.heroImage || "/images/358792494_661391199240576_3424351230899219709_n.jpg"}
+                    alt="Donne and her daughters in the UAE"
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="async"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/images/mama-logo.png";
+                      target.className = "w-full h-full object-contain p-12 opacity-60";
+                    }}
+                    className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-700 ease-out"
+                  />
+                )}
 
                 {/* Subtle warm depth vignette */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#683846]/20 via-transparent to-transparent opacity-30 pointer-events-none" />
