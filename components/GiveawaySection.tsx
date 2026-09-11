@@ -98,8 +98,11 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
     }
   };
 
-  // If inactive on homepage, gracefully hide
-  if (mounted && !campaign.isActive && placement === 'homepage') {
+  const isHomepageVisible = (campaign.isActive ?? true) && (campaign.showOnHomepage !== false);
+  const isEntriesOpen = (campaign.isActive ?? true) && (campaign.pageActive !== false);
+
+  // If hidden on homepage, gracefully hide
+  if (mounted && !isHomepageVisible && placement === 'homepage') {
     return null;
   }
 
@@ -218,9 +221,49 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
           </div>
         </div>
 
-        {/* 4. ENTRY FORM CARD OR CONFIRMATION (Matching Wireframe) */}
+        {/* 4. ENTRY FORM CARD OR CONFIRMATION OR CLOSED NOTICE */}
         <div className="bg-white rounded-3xl border border-[#B75B70]/20 p-6 sm:p-10 shadow-soft max-w-2xl mx-auto">
-          {isSubmitted ? (
+          {!isEntriesOpen ? (
+            /* Giveaway Ended / Paused State */
+            <div className="text-center space-y-5 py-4 animate-fade-in">
+              <div className="w-16 h-16 rounded-full bg-[#F8EDEF] border border-[#B75B70]/30 text-[#B75B70] flex items-center justify-center mx-auto text-3xl">
+                🎁
+              </div>
+              <div className="space-y-2">
+                <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-[#B75B70] bg-[#F8EDEF] px-3.5 py-1 rounded-full border border-[#B75B70]/20">
+                  GIVEAWAY CONCLUDED
+                </span>
+                <h4 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
+                  {campaign.closedHeading || 'This Giveaway Has Ended'}
+                </h4>
+                <p className="text-xs sm:text-sm text-[#332D2F]/80 max-w-md mx-auto leading-relaxed">
+                  {campaign.closedMessage ||
+                    'Thank you to everyone who entered! Entries are currently closed while our winner is selected. Follow our Instagram @mummabeeblog for winner announcements and upcoming UAE family giveaways.'}
+                </p>
+              </div>
+
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href="https://www.instagram.com/mummabeeblog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#B75B70] hover:bg-[#683846] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-xs hover:-translate-y-0.5"
+                >
+                  <span>Follow on Instagram</span>
+                  <span>↗</span>
+                </a>
+                {campaign.relatedGuideUrl && (
+                  <Link
+                    href={campaign.relatedGuideUrl}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#F8EDEF] hover:bg-[#edd4db] text-[#683846] text-xs font-bold uppercase tracking-wider rounded-xl transition-all border border-[#B75B70]/20"
+                  >
+                    <span>{campaign.relatedGuideLinkText || 'Explore UAE Family Guides'}</span>
+                    <span>→</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : isSubmitted ? (
             /* Thank You / Submission Confirmation State */
             <div className="text-center space-y-5 py-4 animate-fade-in">
               <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto text-3xl">

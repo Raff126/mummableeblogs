@@ -223,29 +223,99 @@ export default function AdminGiveawayPage() {
       {/* TAB 1: CAMPAIGN SETTINGS */}
       {activeTab === 'settings' && (
         <form onSubmit={handleSaveCampaign} className="space-y-6">
-          {/* Active Status Switch */}
-          <div className="bg-[#FAF7F7] border border-[#B75B70]/15 rounded-2xl p-5 flex items-center justify-between">
+          {/* Visibility Controls */}
+          <div className="bg-[#FAF7F7] border border-[#B75B70]/15 rounded-2xl p-5 space-y-4">
             <div>
               <h3 className="font-serif text-base font-bold text-[#683846]">
-                Campaign Visibility
+                Campaign Visibility &amp; Display Toggles
               </h3>
               <p className="text-xs text-[#332D2F]/70">
-                When active, the giveaway card appears below Discount Codes on the Homepage and at /giveaway.
+                Turn the giveaway on or off independently across the homepage and the dedicated page.
               </p>
             </div>
 
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={campaign.isActive}
-                onChange={(e) => setCampaign({ ...campaign, isActive: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#B75B70]"></div>
-              <span className="ml-3 text-xs font-bold text-[#683846]">
-                {campaign.isActive ? 'Active (Live)' : 'Paused'}
-              </span>
-            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+              {/* Toggle 1: Master Status */}
+              <div className="bg-white border border-[#B75B70]/20 rounded-xl p-4 flex flex-col justify-between space-y-3">
+                <div>
+                  <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
+                    Master Campaign
+                  </span>
+                  <h4 className="font-serif text-sm font-bold text-[#683846]">Overall Status</h4>
+                  <p className="text-[11px] text-[#332D2F]/70 mt-1">
+                    Master switch. When paused, entries close and homepage section hides.
+                  </p>
+                </div>
+                <div className="pt-2 flex items-center justify-between border-t border-stone-100">
+                  <span className={`text-xs font-bold ${campaign.isActive ? 'text-emerald-700' : 'text-stone-500'}`}>
+                    {campaign.isActive ? '🟢 Active (Live)' : '⏸️ Paused'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={campaign.isActive}
+                      onChange={(e) => setCampaign({ ...campaign, isActive: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#B75B70]"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Toggle 2: Homepage Placement */}
+              <div className="bg-white border border-[#B75B70]/20 rounded-xl p-4 flex flex-col justify-between space-y-3">
+                <div>
+                  <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
+                    Homepage Section
+                  </span>
+                  <h4 className="font-serif text-sm font-bold text-[#683846]">Show Below Deals</h4>
+                  <p className="text-[11px] text-[#332D2F]/70 mt-1">
+                    Toggle to show or hide the giveaway banner on the homepage.
+                  </p>
+                </div>
+                <div className="pt-2 flex items-center justify-between border-t border-stone-100">
+                  <span className={`text-xs font-bold ${(campaign.showOnHomepage !== false) ? 'text-emerald-700' : 'text-stone-500'}`}>
+                    {(campaign.showOnHomepage !== false) ? '👁️ Shown on Home' : '🚫 Hidden on Home'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={campaign.showOnHomepage !== false}
+                      onChange={(e) => setCampaign({ ...campaign, showOnHomepage: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#B75B70]"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Toggle 3: Standalone /giveaway Page Entries */}
+              <div className="bg-white border border-[#B75B70]/20 rounded-xl p-4 flex flex-col justify-between space-y-3">
+                <div>
+                  <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
+                    Giveaway Page Entries
+                  </span>
+                  <h4 className="font-serif text-sm font-bold text-[#683846]">Accept Submissions</h4>
+                  <p className="text-[11px] text-[#332D2F]/70 mt-1">
+                    When off, the /giveaway page displays the Closed notice instead of the form.
+                  </p>
+                </div>
+                <div className="pt-2 flex items-center justify-between border-t border-stone-100">
+                  <span className={`text-xs font-bold ${(campaign.pageActive !== false) ? 'text-emerald-700' : 'text-stone-500'}`}>
+                    {(campaign.pageActive !== false) ? '✍️ Accepting' : '🔒 Closed State'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={campaign.pageActive !== false}
+                      onChange={(e) => setCampaign({ ...campaign, pageActive: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#B75B70]"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Hero Content */}
@@ -475,6 +545,46 @@ export default function AdminGiveawayPage() {
                 onChange={(e) => setCampaign({ ...campaign, thankYouMessage: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
               />
+            </div>
+          </div>
+
+          {/* Concluded / Closed Announcement Copy */}
+          <div className="bg-[#FAF7F7] border border-[#B75B70]/15 rounded-2xl p-5 space-y-4">
+            <div>
+              <h3 className="font-serif text-base font-bold text-[#683846]">
+                Concluded / Closed Campaign Notice
+              </h3>
+              <p className="text-xs text-[#332D2F]/70">
+                Shown to visitors on the /giveaway page when entries are closed or paused.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-[#683846] uppercase mb-1">
+                  Closed Notice Headline
+                </label>
+                <input
+                  type="text"
+                  value={campaign.closedHeading || ''}
+                  onChange={(e) => setCampaign({ ...campaign, closedHeading: e.target.value })}
+                  placeholder="This Giveaway Has Ended"
+                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#683846] uppercase mb-1">
+                  Closed Notice Message
+                </label>
+                <textarea
+                  rows={2}
+                  value={campaign.closedMessage || ''}
+                  onChange={(e) => setCampaign({ ...campaign, closedMessage: e.target.value })}
+                  placeholder="Thank you to everyone who entered! Entries are now closed while our winner is selected. Follow our Instagram @mummabeeblog for winner announcements and upcoming UAE family giveaways."
+                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
+                />
+              </div>
             </div>
           </div>
 

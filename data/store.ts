@@ -212,6 +212,8 @@ export interface WorkWithUsPageContent {
 export interface GiveawayCampaign {
   id: string;
   isActive: boolean;
+  showOnHomepage?: boolean;
+  pageActive?: boolean;
   badge: string;
   title: string;
   subtitle: string;
@@ -226,6 +228,8 @@ export interface GiveawayCampaign {
   termsUrl?: string;
   thankYouHeading: string;
   thankYouMessage: string;
+  closedHeading?: string;
+  closedMessage?: string;
   relatedGuideLinkText?: string;
   relatedGuideUrl?: string;
   updatedAt?: string;
@@ -512,6 +516,8 @@ export function isDealActive(deal: DiscountCode): boolean {
 export const DEFAULT_GIVEAWAY: GiveawayCampaign = {
   id: 'giveaway-family-day-out-2026',
   isActive: true,
+  showOnHomepage: true,
+  pageActive: true,
   badge: 'MUMMABEE GIVEAWAY',
   title: 'Win a family day out in the UAE',
   subtitle: 'Enter below for your chance to win. Full details and terms apply.',
@@ -526,6 +532,8 @@ export const DEFAULT_GIVEAWAY: GiveawayCampaign = {
   termsUrl: '/about',
   thankYouHeading: 'Thank you for entering!',
   thankYouMessage: "We've received your entry. Best of luck! The winner will be contacted directly via email and announced on our Instagram.",
+  closedHeading: 'This Giveaway Has Ended',
+  closedMessage: 'Thank you to everyone who entered! Entries are now closed while the winner is selected. Follow our Instagram @mummabeeblog for winner announcements and upcoming UAE family giveaways.',
   relatedGuideLinkText: 'Discover Tested UAE Family Days Out',
   relatedGuideUrl: '/uae-with-kids',
   updatedAt: '2026-09-11T00:00:00Z',
