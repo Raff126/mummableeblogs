@@ -85,6 +85,38 @@ export default function AdminGiveawayPage() {
     setTimeout(() => setMessage(''), 4000);
   };
 
+  // Instant auto-save toggle handler
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
+  const [toggledSuccessKey, setToggledSuccessKey] = useState<string | null>(null);
+
+  const handleToggleSwitch = (key: 'isActive' | 'showOnHomepage' | 'pageActive') => {
+    let nextVal: boolean;
+    if (key === 'isActive') {
+      nextVal = !campaign.isActive;
+    } else if (key === 'showOnHomepage') {
+      nextVal = !(campaign.showOnHomepage !== false);
+    } else {
+      nextVal = !(campaign.pageActive !== false);
+    }
+
+    setTogglingKey(key);
+
+    const updated: GiveawayCampaign = {
+      ...campaign,
+      [key]: nextVal,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setCampaign(updated);
+    saveGiveaway(updated);
+
+    setTimeout(() => {
+      setTogglingKey(null);
+      setToggledSuccessKey(key);
+      setTimeout(() => setToggledSuccessKey(null), 2500);
+    }, 200);
+  };
+
   const handlePickWinner = () => {
     if (entries.length === 0) {
       alert('No entries available to pick from yet.');
@@ -236,83 +268,131 @@ export default function AdminGiveawayPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
               {/* Toggle 1: Master Status */}
-              <div className="bg-white border border-[#B75B70]/20 rounded-xl p-4 flex flex-col justify-between space-y-3">
+              <div
+                onClick={() => handleToggleSwitch('isActive')}
+                className={`border rounded-2xl p-4 flex flex-col justify-between space-y-3 cursor-pointer transition-all hover:shadow-xs select-none ${
+                  campaign.isActive
+                    ? 'bg-[#FAF7F7] border-[#B75B70]/30 ring-1 ring-[#B75B70]/15'
+                    : 'bg-stone-50 border-stone-200 opacity-80'
+                }`}
+              >
                 <div>
-                  <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
-                    Master Campaign
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
+                      Master Campaign
+                    </span>
+                    {togglingKey === 'isActive' ? (
+                      <span className="text-[10px] text-stone-500 font-semibold animate-pulse">Syncing...</span>
+                    ) : toggledSuccessKey === 'isActive' ? (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">✓ Live</span>
+                    ) : null}
+                  </div>
                   <h4 className="font-serif text-sm font-bold text-[#683846]">Overall Status</h4>
-                  <p className="text-[11px] text-[#332D2F]/70 mt-1">
+                  <p className="text-[11px] text-[#332D2F]/70 mt-1 leading-snug">
                     Master switch. When paused, entries close and homepage section hides.
                   </p>
                 </div>
-                <div className="pt-2 flex items-center justify-between border-t border-stone-100">
+                <div className="pt-2 flex items-center justify-between border-t border-[#B75B70]/10">
                   <span className={`text-xs font-bold ${campaign.isActive ? 'text-emerald-700' : 'text-stone-500'}`}>
                     {campaign.isActive ? '🟢 Active (Live)' : '⏸️ Paused'}
                   </span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={campaign.isActive}
-                      onChange={(e) => setCampaign({ ...campaign, isActive: e.target.checked })}
-                      className="sr-only peer"
+                  <div
+                    className={`w-11 h-6 rounded-full transition-colors relative flex items-center px-0.5 ${
+                      campaign.isActive ? 'bg-[#B75B70]' : 'bg-stone-300'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${
+                        campaign.isActive ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                     />
-                    <div className="w-10 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#B75B70]"></div>
-                  </label>
+                  </div>
                 </div>
               </div>
 
               {/* Toggle 2: Homepage Placement */}
-              <div className="bg-white border border-[#B75B70]/20 rounded-xl p-4 flex flex-col justify-between space-y-3">
+              <div
+                onClick={() => handleToggleSwitch('showOnHomepage')}
+                className={`border rounded-2xl p-4 flex flex-col justify-between space-y-3 cursor-pointer transition-all hover:shadow-xs select-none ${
+                  campaign.showOnHomepage !== false
+                    ? 'bg-[#FAF7F7] border-[#B75B70]/30 ring-1 ring-[#B75B70]/15'
+                    : 'bg-stone-50 border-stone-200 opacity-80'
+                }`}
+              >
                 <div>
-                  <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
-                    Homepage Section
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
+                      Homepage Section
+                    </span>
+                    {togglingKey === 'showOnHomepage' ? (
+                      <span className="text-[10px] text-stone-500 font-semibold animate-pulse">Syncing...</span>
+                    ) : toggledSuccessKey === 'showOnHomepage' ? (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">✓ Live</span>
+                    ) : null}
+                  </div>
                   <h4 className="font-serif text-sm font-bold text-[#683846]">Show Below Deals</h4>
-                  <p className="text-[11px] text-[#332D2F]/70 mt-1">
+                  <p className="text-[11px] text-[#332D2F]/70 mt-1 leading-snug">
                     Toggle to show or hide the giveaway banner on the homepage.
                   </p>
                 </div>
-                <div className="pt-2 flex items-center justify-between border-t border-stone-100">
+                <div className="pt-2 flex items-center justify-between border-t border-[#B75B70]/10">
                   <span className={`text-xs font-bold ${(campaign.showOnHomepage !== false) ? 'text-emerald-700' : 'text-stone-500'}`}>
                     {(campaign.showOnHomepage !== false) ? '👁️ Shown on Home' : '🚫 Hidden on Home'}
                   </span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={campaign.showOnHomepage !== false}
-                      onChange={(e) => setCampaign({ ...campaign, showOnHomepage: e.target.checked })}
-                      className="sr-only peer"
+                  <div
+                    className={`w-11 h-6 rounded-full transition-colors relative flex items-center px-0.5 ${
+                      campaign.showOnHomepage !== false ? 'bg-[#B75B70]' : 'bg-stone-300'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${
+                        campaign.showOnHomepage !== false ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                     />
-                    <div className="w-10 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#B75B70]"></div>
-                  </label>
+                  </div>
                 </div>
               </div>
 
               {/* Toggle 3: Standalone /giveaway Page Entries */}
-              <div className="bg-white border border-[#B75B70]/20 rounded-xl p-4 flex flex-col justify-between space-y-3">
+              <div
+                onClick={() => handleToggleSwitch('pageActive')}
+                className={`border rounded-2xl p-4 flex flex-col justify-between space-y-3 cursor-pointer transition-all hover:shadow-xs select-none ${
+                  campaign.pageActive !== false
+                    ? 'bg-[#FAF7F7] border-[#B75B70]/30 ring-1 ring-[#B75B70]/15'
+                    : 'bg-stone-50 border-stone-200 opacity-80'
+                }`}
+              >
                 <div>
-                  <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
-                    Giveaway Page Entries
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-[#B75B70] uppercase tracking-wider block">
+                      Giveaway Page Entries
+                    </span>
+                    {togglingKey === 'pageActive' ? (
+                      <span className="text-[10px] text-stone-500 font-semibold animate-pulse">Syncing...</span>
+                    ) : toggledSuccessKey === 'pageActive' ? (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">✓ Live</span>
+                    ) : null}
+                  </div>
                   <h4 className="font-serif text-sm font-bold text-[#683846]">Accept Submissions</h4>
-                  <p className="text-[11px] text-[#332D2F]/70 mt-1">
+                  <p className="text-[11px] text-[#332D2F]/70 mt-1 leading-snug">
                     When off, the /giveaway page displays the Closed notice instead of the form.
                   </p>
                 </div>
-                <div className="pt-2 flex items-center justify-between border-t border-stone-100">
+                <div className="pt-2 flex items-center justify-between border-t border-[#B75B70]/10">
                   <span className={`text-xs font-bold ${(campaign.pageActive !== false) ? 'text-emerald-700' : 'text-stone-500'}`}>
                     {(campaign.pageActive !== false) ? '✍️ Accepting' : '🔒 Closed State'}
                   </span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={campaign.pageActive !== false}
-                      onChange={(e) => setCampaign({ ...campaign, pageActive: e.target.checked })}
-                      className="sr-only peer"
+                  <div
+                    className={`w-11 h-6 rounded-full transition-colors relative flex items-center px-0.5 ${
+                      campaign.pageActive !== false ? 'bg-[#B75B70]' : 'bg-stone-300'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${
+                        campaign.pageActive !== false ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                     />
-                    <div className="w-10 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#B75B70]"></div>
-                  </label>
+                  </div>
                 </div>
               </div>
             </div>
