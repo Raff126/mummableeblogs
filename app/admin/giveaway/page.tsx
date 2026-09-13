@@ -11,6 +11,7 @@ import {
   getGiveawayEntries,
   STORAGE_KEYS,
 } from '../../../data/store';
+import ImageInputWithPaste from '../../../components/admin/ImageInputWithPaste';
 
 export default function AdminGiveawayPage() {
   const [campaign, setCampaign] = useState<GiveawayCampaign>(DEFAULT_GIVEAWAY);
@@ -40,7 +41,7 @@ export default function AdminGiveawayPage() {
         ]);
 
         if (fsCampaign && typeof fsCampaign === 'object') {
-          setCampaign(fsCampaign);
+          setCampaign((prev) => ({ ...DEFAULT_GIVEAWAY, ...prev, ...fsCampaign }));
           try {
             localStorage.setItem(STORAGE_KEYS.GIVEAWAY, JSON.stringify(fsCampaign));
           } catch (_) {}
@@ -71,6 +72,9 @@ export default function AdminGiveawayPage() {
         channel.onmessage = (event) => {
           if (event?.data?.type === 'GIVEAWAY_UPDATED' && event.data.campaign) {
             setCampaign(event.data.campaign);
+            try {
+              localStorage.setItem(STORAGE_KEYS.GIVEAWAY, JSON.stringify(event.data.campaign));
+            } catch (_) {}
           }
         };
       }
@@ -426,9 +430,9 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.badge}
+                  value={campaign.badge ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, badge: e.target.value })}
-                  placeholder="MUMMABEE GIVEAWAY"
+                  placeholder="e.g. MUMMABEE GIVEAWAY (leave empty to hide)"
                   className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
@@ -439,9 +443,9 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.entriesCloseText}
+                  value={campaign.entriesCloseText ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, entriesCloseText: e.target.value })}
-                  placeholder="Sunday 11:59 PM"
+                  placeholder="e.g. Sunday 11:59 PM (leave empty to hide)"
                   className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
@@ -453,9 +457,9 @@ export default function AdminGiveawayPage() {
               </label>
               <input
                 type="text"
-                value={campaign.title}
+                value={campaign.title ?? ''}
                 onChange={(e) => setCampaign({ ...campaign, title: e.target.value })}
-                placeholder="Win a family day out in the UAE"
+                placeholder="e.g. Win a family day out in the UAE"
                 className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] font-semibold focus:outline-none focus:border-[#683846]"
               />
             </div>
@@ -466,9 +470,9 @@ export default function AdminGiveawayPage() {
               </label>
               <input
                 type="text"
-                value={campaign.subtitle}
+                value={campaign.subtitle ?? ''}
                 onChange={(e) => setCampaign({ ...campaign, subtitle: e.target.value })}
-                placeholder="Enter below for your chance to win. Full details and terms apply."
+                placeholder="e.g. Enter below for your chance to win... (leave empty to hide)"
                 className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
               />
             </div>
@@ -476,36 +480,46 @@ export default function AdminGiveawayPage() {
 
           {/* Prize Details & Visual */}
           <div className="bg-[#FAF7F7] border border-[#B75B70]/15 rounded-2xl p-5 space-y-4">
-            <h3 className="font-serif text-base font-bold text-[#683846]">
-              Prize Showcase &amp; Visual
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-base font-bold text-[#683846]">
+                Prize Showcase &amp; Visual
+              </h3>
+              {campaign.prizeImage && campaign.prizeImage !== DEFAULT_GIVEAWAY.prizeImage && (
+                <button
+                  type="button"
+                  onClick={() => setCampaign({ ...campaign, prizeImage: DEFAULT_GIVEAWAY.prizeImage })}
+                  className="text-[11px] font-bold text-[#B75B70] hover:text-[#683846] hover:underline cursor-pointer flex items-center gap-1"
+                  title="Restore default prize photo"
+                >
+                  <span>↺ Reset to Default Photo</span>
+                </button>
+              )}
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-[#683846] uppercase mb-1">
-                  Prize Title
-                </label>
-                <input
-                  type="text"
-                  value={campaign.prizeTitle}
-                  onChange={(e) => setCampaign({ ...campaign, prizeTitle: e.target.value })}
-                  placeholder="The prize"
-                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-[#683846] uppercase mb-1">
+                Prize Title
+              </label>
+              <input
+                type="text"
+                value={campaign.prizeTitle ?? ''}
+                onChange={(e) => setCampaign({ ...campaign, prizeTitle: e.target.value })}
+                placeholder="e.g. The prize (leave empty to hide)"
+                className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
+              />
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#683846] uppercase mb-1">
-                  Prize Image URL
-                </label>
-                <input
-                  type="text"
-                  value={campaign.prizeImage}
-                  onChange={(e) => setCampaign({ ...campaign, prizeImage: e.target.value })}
-                  placeholder="/images/your-giveaway-photo.jpg"
-                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
-                />
-              </div>
+            <div>
+              <ImageInputWithPaste
+                label="Prize Image (Upload File, Media Library, Paste, or URL)"
+                value={campaign.prizeImage ?? ''}
+                onChange={(newUrl) => setCampaign({ ...campaign, prizeImage: newUrl })}
+                placeholder="Paste image URL, upload photo file, or press Ctrl+V to paste copied image"
+                maxWidth={1200}
+                maxHeight={1200}
+                quality={0.85}
+                helpText="💡 Tip: Click 'Upload File' to select a photo from your computer or phone, paste with Ctrl+V, or enter an image URL."
+              />
             </div>
 
             <div>
@@ -514,9 +528,9 @@ export default function AdminGiveawayPage() {
               </label>
               <textarea
                 rows={3}
-                value={campaign.prizeDescription}
+                value={campaign.prizeDescription ?? ''}
                 onChange={(e) => setCampaign({ ...campaign, prizeDescription: e.target.value })}
-                placeholder="A family experience to enjoy together. One winner will be selected after the giveaway closes."
+                placeholder="e.g. A family experience to enjoy together... (leave empty to hide)"
                 className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
               />
             </div>
@@ -524,9 +538,14 @@ export default function AdminGiveawayPage() {
 
           {/* Stepper Instructions */}
           <div className="bg-[#FAF7F7] border border-[#B75B70]/15 rounded-2xl p-5 space-y-4">
-            <h3 className="font-serif text-base font-bold text-[#683846]">
-              &ldquo;How to enter&rdquo; 3-Step Instructions
-            </h3>
+            <div>
+              <h3 className="font-serif text-base font-bold text-[#683846]">
+                &ldquo;How to enter&rdquo; 3-Step Instructions
+              </h3>
+              <p className="text-[11px] text-[#332D2F]/70 mt-0.5">
+                Leave any step empty to exclude it. Remaining steps will automatically re-number (e.g. 01, 02). If all 3 are empty, the entire section will be hidden.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
@@ -535,10 +554,10 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.step1Text}
+                  value={campaign.step1Text ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, step1Text: e.target.value })}
-                  placeholder="Fill in the form below"
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                  placeholder="e.g. Fill in the form below (leave empty to hide)"
+                  className="w-full px-3.5 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
 
@@ -548,10 +567,10 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.step2Text}
+                  value={campaign.step2Text ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, step2Text: e.target.value })}
-                  placeholder="Follow the giveaway details"
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                  placeholder="e.g. Follow the giveaway details (leave empty to hide)"
+                  className="w-full px-3.5 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
 
@@ -561,10 +580,10 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.step3Text}
+                  value={campaign.step3Text ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, step3Text: e.target.value })}
-                  placeholder="Wait for winner announcement"
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                  placeholder="e.g. Wait for winner announcement (leave empty to hide)"
+                  className="w-full px-3.5 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
             </div>
@@ -583,9 +602,10 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.termsText}
+                  value={campaign.termsText ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, termsText: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                  placeholder="e.g. I have read and agree to the giveaway terms and privacy notice."
+                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
 
@@ -595,10 +615,10 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.termsUrl || ''}
+                  value={campaign.termsUrl ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, termsUrl: e.target.value })}
-                  placeholder="/about"
-                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                  placeholder="e.g. /about"
+                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
             </div>
@@ -610,9 +630,10 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.thankYouHeading}
+                  value={campaign.thankYouHeading ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, thankYouHeading: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                  placeholder="e.g. Thank you for entering!"
+                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
 
@@ -622,10 +643,10 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.relatedGuideUrl || ''}
+                  value={campaign.relatedGuideUrl ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, relatedGuideUrl: e.target.value })}
-                  placeholder="/uae-with-kids"
-                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                  placeholder="e.g. /uae-with-kids"
+                  className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
             </div>
@@ -636,9 +657,10 @@ export default function AdminGiveawayPage() {
               </label>
               <textarea
                 rows={2}
-                value={campaign.thankYouMessage}
+                value={campaign.thankYouMessage ?? ''}
                 onChange={(e) => setCampaign({ ...campaign, thankYouMessage: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F]"
+                placeholder="e.g. We've received your entry. Best of luck!"
+                className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
               />
             </div>
           </div>
@@ -661,9 +683,9 @@ export default function AdminGiveawayPage() {
                 </label>
                 <input
                   type="text"
-                  value={campaign.closedHeading || ''}
+                  value={campaign.closedHeading ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, closedHeading: e.target.value })}
-                  placeholder="This Giveaway Has Ended"
+                  placeholder="e.g. This Giveaway Has Ended"
                   className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>
@@ -674,9 +696,9 @@ export default function AdminGiveawayPage() {
                 </label>
                 <textarea
                   rows={2}
-                  value={campaign.closedMessage || ''}
+                  value={campaign.closedMessage ?? ''}
                   onChange={(e) => setCampaign({ ...campaign, closedMessage: e.target.value })}
-                  placeholder="Thank you to everyone who entered! Entries are now closed while our winner is selected. Follow our Instagram @mummabeeblog for winner announcements and upcoming UAE family giveaways."
+                  placeholder="e.g. Thank you to everyone who entered! Entries are now closed while our winner is selected..."
                   className="w-full px-4 py-2.5 bg-white border border-[#B75B70]/25 rounded-xl text-xs text-[#332D2F] focus:outline-none focus:border-[#683846]"
                 />
               </div>

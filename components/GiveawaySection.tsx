@@ -159,6 +159,22 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
     return null;
   }
 
+  // Extract texts respecting empty strings
+  const badgeText = campaign.badge !== undefined ? campaign.badge : DEFAULT_GIVEAWAY.badge;
+  const titleText = campaign.title !== undefined ? campaign.title : DEFAULT_GIVEAWAY.title;
+  const subtitleText = campaign.subtitle !== undefined ? campaign.subtitle : DEFAULT_GIVEAWAY.subtitle;
+  const prizeTitleText = campaign.prizeTitle !== undefined ? campaign.prizeTitle : DEFAULT_GIVEAWAY.prizeTitle;
+  const prizeDescText = campaign.prizeDescription !== undefined ? campaign.prizeDescription : DEFAULT_GIVEAWAY.prizeDescription;
+  const closeNoticeText = campaign.entriesCloseText !== undefined ? campaign.entriesCloseText : DEFAULT_GIVEAWAY.entriesCloseText;
+
+  // Dynamically collect only steps that actually contain non-empty text
+  const stepCandidates = [
+    campaign.step1Text !== undefined ? campaign.step1Text : DEFAULT_GIVEAWAY.step1Text,
+    campaign.step2Text !== undefined ? campaign.step2Text : DEFAULT_GIVEAWAY.step2Text,
+    campaign.step3Text !== undefined ? campaign.step3Text : DEFAULT_GIVEAWAY.step3Text,
+  ];
+  const activeSteps = stepCandidates.filter((s) => typeof s === 'string' && s.trim().length > 0);
+
   return (
     <section
       id="giveaway"
@@ -174,15 +190,21 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* 1. HERO HEADER (Matching Wireframe) */}
         <div className="text-center space-y-3">
-          <span className="inline-block text-[11px] sm:text-xs font-bold uppercase tracking-widest text-[#B75B70] bg-[#F8EDEF] px-3.5 py-1 rounded-full border border-[#B75B70]/25">
-            {campaign.badge || 'MUMMABEE GIVEAWAY'}
-          </span>
-          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#683846] tracking-tight">
-            {campaign.title || 'Win a family day out in the UAE'}
-          </h2>
-          <p className="text-sm sm:text-base text-[#332D2F]/75 max-w-xl mx-auto font-sans leading-relaxed">
-            {campaign.subtitle || 'Enter below for your chance to win. Full details and terms apply.'}
-          </p>
+          {badgeText?.trim() && (
+            <span className="inline-block text-[11px] sm:text-xs font-bold uppercase tracking-widest text-[#B75B70] bg-[#F8EDEF] px-3.5 py-1 rounded-full border border-[#B75B70]/25">
+              {badgeText}
+            </span>
+          )}
+          {titleText?.trim() && (
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#683846] tracking-tight">
+              {titleText}
+            </h2>
+          )}
+          {subtitleText?.trim() && (
+            <p className="text-sm sm:text-base text-[#332D2F]/75 max-w-xl mx-auto font-sans leading-relaxed">
+              {subtitleText}
+            </p>
+          )}
         </div>
 
         {/* 2. PRIZE HIGHLIGHT CARD (Matching Wireframe 2-column Card) */}
@@ -193,7 +215,7 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
               {campaign.prizeImage ? (
                 <img
                   src={campaign.prizeImage}
-                  alt={campaign.prizeTitle || 'Giveaway Prize'}
+                  alt={prizeTitleText || 'Giveaway Prize'}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -214,65 +236,61 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
             {/* Right: Prize Details */}
             <div className="md:col-span-7 p-6 sm:p-8 flex flex-col justify-between space-y-6">
               <div className="space-y-3">
-                <h3 className="font-serif text-2xl font-bold text-[#683846]">
-                  {campaign.prizeTitle || 'The prize'}
-                </h3>
-                <p className="text-sm text-[#332D2F]/80 leading-relaxed font-sans">
-                  {campaign.prizeDescription ||
-                    'A family experience to enjoy together. One winner will be selected after the giveaway closes.'}
-                </p>
+                {prizeTitleText?.trim() && (
+                  <h3 className="font-serif text-2xl font-bold text-[#683846]">
+                    {prizeTitleText}
+                  </h3>
+                )}
+                {prizeDescText?.trim() && (
+                  <p className="text-sm text-[#332D2F]/80 leading-relaxed font-sans">
+                    {prizeDescText}
+                  </p>
+                )}
               </div>
 
-              <div className="pt-4 border-t border-[#B75B70]/15 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#B75B70] block">
-                  ENTRIES CLOSE
-                </span>
-                <div className="font-serif text-lg font-bold text-[#683846]">
-                  {campaign.entriesCloseText || 'Sunday 11:59 PM'}
+              {closeNoticeText?.trim() && (
+                <div className="pt-4 border-t border-[#B75B70]/15 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#B75B70] block">
+                    ENTRIES CLOSE
+                  </span>
+                  <div className="font-serif text-lg font-bold text-[#683846]">
+                    {closeNoticeText}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* 3. HOW TO ENTER (Matching Wireframe 01 - 02 - 03 Stepper) */}
-        <div className="text-center space-y-6 pt-2">
-          <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
-            How to enter
-          </h3>
+        {/* 3. HOW TO ENTER (Dynamically renders only non-empty steps) */}
+        {activeSteps.length > 0 && (
+          <div className="text-center space-y-6 pt-2">
+            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
+              How to enter
+            </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto">
-            {/* Step 01 */}
-            <div className="flex flex-col items-center text-center space-y-2">
-              <span className="font-serif text-3xl sm:text-4xl font-bold text-[#B75B70] leading-none">
-                01
-              </span>
-              <p className="text-xs sm:text-sm text-[#332D2F]/80 font-medium leading-snug">
-                {campaign.step1Text || 'Fill in the form below'}
-              </p>
-            </div>
-
-            {/* Step 02 */}
-            <div className="flex flex-col items-center text-center space-y-2">
-              <span className="font-serif text-3xl sm:text-4xl font-bold text-[#B75B70] leading-none">
-                02
-              </span>
-              <p className="text-xs sm:text-sm text-[#332D2F]/80 font-medium leading-snug">
-                {campaign.step2Text || 'Follow the giveaway details'}
-              </p>
-            </div>
-
-            {/* Step 03 */}
-            <div className="flex flex-col items-center text-center space-y-2">
-              <span className="font-serif text-3xl sm:text-4xl font-bold text-[#B75B70] leading-none">
-                03
-              </span>
-              <p className="text-xs sm:text-sm text-[#332D2F]/80 font-medium leading-snug">
-                {campaign.step3Text || 'Wait for winner announcement'}
-              </p>
+            <div
+              className={`grid grid-cols-1 ${
+                activeSteps.length === 1
+                  ? 'max-w-xs'
+                  : activeSteps.length === 2
+                  ? 'sm:grid-cols-2 max-w-lg'
+                  : 'sm:grid-cols-3 max-w-2xl'
+              } gap-6 mx-auto`}
+            >
+              {activeSteps.map((stepText, idx) => (
+                <div key={idx} className="flex flex-col items-center text-center space-y-2">
+                  <span className="font-serif text-3xl sm:text-4xl font-bold text-[#B75B70] leading-none">
+                    {String(idx + 1).padStart(2, '0')}
+                  </span>
+                  <p className="text-xs sm:text-sm text-[#332D2F]/80 font-medium leading-snug">
+                    {stepText}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
+        )}
 
         {/* 4. ENTRY FORM CARD OR CONFIRMATION OR CLOSED NOTICE */}
         <div className="bg-white rounded-3xl border border-[#B75B70]/20 p-6 sm:p-10 shadow-soft max-w-2xl mx-auto">
@@ -287,11 +305,10 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
                   GIVEAWAY CONCLUDED
                 </span>
                 <h4 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
-                  {campaign.closedHeading || 'This Giveaway Has Ended'}
+                  {campaign.closedHeading ?? DEFAULT_GIVEAWAY.closedHeading}
                 </h4>
                 <p className="text-xs sm:text-sm text-[#332D2F]/80 max-w-md mx-auto leading-relaxed">
-                  {campaign.closedMessage ||
-                    'Thank you to everyone who entered! Entries are currently closed while our winner is selected. Follow our Instagram @mummabeeblog for winner announcements and upcoming UAE family giveaways.'}
+                  {campaign.closedMessage ?? DEFAULT_GIVEAWAY.closedMessage}
                 </p>
               </div>
 
@@ -324,11 +341,10 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
               </div>
               <div className="space-y-2">
                 <h4 className="font-serif text-2xl sm:text-3xl font-bold text-[#683846]">
-                  {campaign.thankYouHeading || 'Thank you for entering!'}
+                  {campaign.thankYouHeading ?? DEFAULT_GIVEAWAY.thankYouHeading}
                 </h4>
                 <p className="text-xs sm:text-sm text-[#332D2F]/80 max-w-md mx-auto leading-relaxed">
-                  {campaign.thankYouMessage ||
-                    "We've received your entry. Best of luck! The winner will be contacted directly via email and announced on our Instagram."}
+                  {campaign.thankYouMessage ?? DEFAULT_GIVEAWAY.thankYouMessage}
                 </p>
               </div>
 
@@ -435,8 +451,7 @@ export default function GiveawaySection({ placement = 'homepage' }: GiveawaySect
                       className="w-4 h-4 rounded text-[#B75B70] focus:ring-[#B75B70] mt-0.5"
                     />
                     <span className="leading-snug">
-                      {campaign.termsText ||
-                        'I have read and agree to the giveaway terms and privacy notice.'}{' '}
+                      {campaign.termsText ?? DEFAULT_GIVEAWAY.termsText}{' '}
                       {campaign.termsUrl && (
                         <Link
                           href={campaign.termsUrl}

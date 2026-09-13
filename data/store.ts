@@ -553,6 +553,19 @@ export function getInitialGiveaway(): GiveawayCampaign {
   return DEFAULT_GIVEAWAY;
 }
 
+let giveawayBroadcastChannel: BroadcastChannel | null = null;
+function getGiveawayBroadcastChannel(): BroadcastChannel | null {
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return null;
+  if (!giveawayBroadcastChannel) {
+    try {
+      giveawayBroadcastChannel = new BroadcastChannel('mummabee_giveaway_channel');
+    } catch (_) {
+      return null;
+    }
+  }
+  return giveawayBroadcastChannel;
+}
+
 export function saveGiveaway(campaign: GiveawayCampaign): void {
   if (typeof window === 'undefined') return;
   safeSetLocalStorage(STORAGE_KEYS.GIVEAWAY, JSON.stringify(campaign));
@@ -563,10 +576,9 @@ export function saveGiveaway(campaign: GiveawayCampaign): void {
 
   // 2. Cross-tab BroadcastChannel instant message (< 5ms)
   try {
-    if (typeof BroadcastChannel !== 'undefined') {
-      const channel = new BroadcastChannel('mummabee_giveaway_channel');
+    const channel = getGiveawayBroadcastChannel();
+    if (channel) {
       channel.postMessage({ type: 'GIVEAWAY_UPDATED', campaign });
-      channel.close();
     }
   } catch (_) {}
 
