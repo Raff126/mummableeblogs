@@ -56,11 +56,19 @@ export default function ImageInputWithPaste({
       window.location.hostname === '127.0.0.1' ||
       window.location.hostname === '0.0.0.0'
     );
+
+    // On production static hosting, return compressed data URL directly and instantly
     if (!isLocalhost) {
-      // In production static export, use client-side optimized data URL directly
-      return typeof dataUrlOrFile === 'string' ? dataUrlOrFile : '';
+      if (typeof dataUrlOrFile === 'string') return dataUrlOrFile;
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string || '');
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(dataUrlOrFile);
+      });
     }
 
+    // On localhost, try local API upload
     try {
       if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:image/')) {
         const res = await fetch('/api/upload/', {

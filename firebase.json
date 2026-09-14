@@ -101,11 +101,20 @@
         ]
       },
       {
-        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|js|css)",
+        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "public, max-age=3600"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=0, must-revalidate"
           }
         ]
       },

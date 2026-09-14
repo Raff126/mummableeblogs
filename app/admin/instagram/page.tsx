@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   getInitialInstagramPosts,
+  getInstagramUpdatedAt,
   saveInstagramPosts,
   getInitialMedia,
   saveMedia,
@@ -32,6 +33,8 @@ export default function AdminInstagramPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [firestoreWarning, setFirestoreWarning] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
@@ -40,12 +43,21 @@ export default function AdminInstagramPage() {
     setPosts(getInitialInstagramPosts());
     setMediaList(getInitialMedia());
 
-    // Load from Firestore for cross-device cloud sync
+    // Load from Firestore for cross-device cloud sync (timestamp-aware)
     (async () => {
       try {
         const { fetchInstagramFromFirestore } = await import('../../../utils/firestoreSettings');
         const fsPosts = await fetchInstagramFromFirestore();
         if (Array.isArray(fsPosts) && fsPosts.length > 0) {
+          // Compare timestamps: only overwrite if Firestore data is newer
+          const localUpdatedAt = getInstagramUpdatedAt();
+          const firestoreUpdatedAt = (fsPosts as any).__updatedAt || null;
+
+          if (localUpdatedAt && firestoreUpdatedAt && new Date(localUpdatedAt) > new Date(firestoreUpdatedAt)) {
+            // Local data is newer — don't overwrite
+            return;
+          }
+
           setPosts(fsPosts);
           try {
             localStorage.setItem(STORAGE_KEYS.INSTAGRAM, JSON.stringify(fsPosts));
@@ -74,7 +86,7 @@ export default function AdminInstagramPage() {
     }
 
     try {
-      const result = await compressImage(file, 800, 800, 0.82);
+      const result = await compressImage(file, 600, 600, 0.75);
       if (isEditing && editingPost) {
         setEditingPost({ ...editingPost, image: result });
       } else {
@@ -103,7 +115,7 @@ export default function AdminInstagramPage() {
   };
 
 
-  const handleAddPost = (e: React.FormEvent) => {
+  const handleAddPost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim() || !isValidInstagramUrl(url)) {
       setError('Please enter a valid Instagram post URL (e.g. https://www.instagram.com/p/...).');
@@ -112,16 +124,16 @@ export default function AdminInstagramPage() {
 
     const newPost: InstagramPost = {
       id: `ig-${Date.now()}`,
-      url,
-      caption: caption || 'Recent moment from MummaBeeBlog',
+      url: url.trim(),
+      caption: caption.trim() || 'Recent moment from MummaBeeBlog',
       displayDate,
       visible,
-      image: photoPreview || 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&fit=crop&q=80',
+      image: photoPreview.trim(),
     };
 
     const updated = [newPost, ...posts];
     setPosts(updated);
-    saveInstagramPosts(updated);
+    const result = await saveInstagramPosts(updated);
 
     // Reset Form
     setUrl('');
@@ -129,28 +141,41 @@ export default function AdminInstagramPage() {
     setPhotoPreview('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     setError('');
-    setMessage('Instagram post added successfully! Uploaded photo is linked to your Instagram URL.');
-    setTimeout(() => setMessage(''), 3500);
-  };
+    setFirestoreWarning('');
 
-  const handleToggleVisibility = (id: string) => {
+    if (result.firestoreFailed) {
+      setFirestoreWarning('⚠️ Post saved locally but could not sync to the cloud. Changes may not appear on other devices until next successful sync.');
+    } else {
+      setMessage('Instagram post added successfully! Uploaded photo is linked to your Instagram URL.');
+      setTimeout(() => setMessage(''), 3500);
+    }};
+
+  const handleToggleVisibility = async (id: string) => {
     const updated = posts.map((p) => (p.id === id ? { ...p, visible: !p.visible } : p));
     setPosts(updated);
-    saveInstagramPosts(updated);
-    setMessage('Post visibility updated.');
-    setTimeout(() => setMessage(''), 2000);
+    const result = await saveInstagramPosts(updated);
+    if (result.firestoreFailed) {
+      setFirestoreWarning('⚠️ Visibility change saved locally but could not sync to the cloud.');
+    } else {
+      setMessage('Post visibility updated.');
+      setTimeout(() => setMessage(''), 2000);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const updated = posts.filter((p) => p.id !== id);
     setPosts(updated);
-    saveInstagramPosts(updated);
+    const result = await saveInstagramPosts(updated);
     setDeleteConfirmId(null);
-    setMessage('Instagram post removed from website.');
-    setTimeout(() => setMessage(''), 3000);
+    if (result.firestoreFailed) {
+      setFirestoreWarning('⚠️ Post deleted locally but could not sync to the cloud.');
+    } else {
+      setMessage('Instagram post removed from website.');
+      setTimeout(() => setMessage(''), 3000);
+    }
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPost) return;
     if (!isValidInstagramUrl(editingPost.url)) {
@@ -158,13 +183,30 @@ export default function AdminInstagramPage() {
       return;
     }
 
-    const updated = posts.map((p) => (p.id === editingPost.id ? editingPost : p));
+    setIsSavingEdit(true);
+    const updatedPost: InstagramPost = {
+      ...editingPost,
+      image: (editingPost.image || '').trim(),
+    };
+    const updated = posts.map((p) => (p.id === updatedPost.id ? updatedPost : p));
     setPosts(updated);
-    saveInstagramPosts(updated);
     setEditingPost(null);
     setError('');
-    setMessage('Instagram post updated successfully.');
-    setTimeout(() => setMessage(''), 3000);
+    setFirestoreWarning('');
+
+    try {
+      const result = await saveInstagramPosts(updated);
+      if (result.firestoreFailed) {
+        setFirestoreWarning('⚠️ Changes saved locally but could not sync to the cloud.');
+      } else {
+        setMessage('Instagram post updated successfully.');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (err: any) {
+      setError('Failed to sync changes to cloud: ' + (err?.message || ''));
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   return (
@@ -188,6 +230,22 @@ export default function AdminInstagramPage() {
         </div>
       )}
 
+      {firestoreWarning && (
+        <div className="bg-amber-50 text-amber-800 text-xs font-semibold p-4 rounded-2xl border border-amber-300 shadow-2xs flex items-start gap-2">
+          <span className="text-base leading-none mt-0.5">☁️</span>
+          <div>
+            <p>{firestoreWarning}</p>
+            <button
+              type="button"
+              onClick={() => setFirestoreWarning('')}
+              className="mt-1.5 text-[10px] font-bold text-amber-700 hover:text-amber-900 underline cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Add Instagram Post Form */}
       <form onSubmit={handleAddPost} className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-soft space-y-6 font-sans">
         <h2 className="font-serif text-xl font-bold text-[#683846] border-b border-gray-100 pb-3">
@@ -201,8 +259,9 @@ export default function AdminInstagramPage() {
             value={photoPreview}
             onChange={(newUrl) => setPhotoPreview(newUrl)}
             placeholder="Paste image URL, upload photo file, or press Ctrl+V to paste copied image"
-            maxWidth={800}
-            maxHeight={800}
+            maxWidth={600}
+            maxHeight={600}
+            quality={0.75}
             helpText="💡 Tip: You can copy any image to clipboard and press Ctrl+V right here to paste it instantly!"
           />
         </div>
@@ -304,11 +363,21 @@ export default function AdminInstagramPage() {
             >
               <div className="space-y-2">
                 <div className="h-44 rounded-xl overflow-hidden bg-gray-200 relative border border-gray-100">
-                  <img
-                    src={post.image || '/images/mama-logo.png'}
-                    alt={post.caption}
-                    className="w-full h-full object-cover"
-                  />
+                  {post.image ? (
+                    <img
+                      src={post.image}
+                      alt={post.caption}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-gradient-to-br from-[#F8EDEF] to-[#ebd4d9] text-[#683846]">
+                      <span className="text-2xl mb-1">📷</span>
+                      <span className="text-xs font-bold uppercase tracking-wider">No Photo Attached</span>
+                      <span className="text-[10px] text-[#332D2F]/70 mt-0.5">
+                        Displays as branded card on website
+                      </span>
+                    </div>
+                  )}
                   <span
                     className={`absolute top-2 right-2 text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full shadow-xs ${
                       post.visible ? 'bg-[#F8EDEF] text-[#683846] border border-[#D7BB91]' : 'bg-gray-200 text-gray-700'
@@ -411,8 +480,9 @@ export default function AdminInstagramPage() {
                   value={editingPost.image || ''}
                   onChange={(newUrl) => setEditingPost({ ...editingPost, image: newUrl })}
                   placeholder="Paste image URL, upload photo, or press Ctrl+V"
-                  maxWidth={800}
-                  maxHeight={800}
+                  maxWidth={600}
+                  maxHeight={600}
+                  quality={0.75}
                 />
               </div>
 
@@ -475,12 +545,13 @@ export default function AdminInstagramPage() {
                 <button
                   type="button"
                   onClick={() => setEditingPost(null)}
-                  className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-[#332D2F]"
+                  disabled={isSavingEdit}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-[#332D2F] cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
-                  Save Changes
+                <button type="submit" disabled={isSavingEdit} className="btn-primary cursor-pointer">
+                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

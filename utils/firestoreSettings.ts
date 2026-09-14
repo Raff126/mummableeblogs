@@ -1,6 +1,6 @@
 'use client';
 
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
 import { getFirebaseDb, ensureFirebaseAuth } from './firebase';
 import {
   HomepageContent,
@@ -220,12 +220,58 @@ export async function fetchInstagramFromFirestore(): Promise<InstagramPost[] | n
 
   const fetchTask = async (): Promise<InstagramPost[] | null> => {
     try {
+      // 1. First check the individual-item subcollection (unlimited total capacity)
+      const itemsCol = collection(db, SETTINGS_COLLECTION, 'instagram_feed', 'items');
+      const itemsSnap = await getDocs(itemsCol);
+      if (!itemsSnap.empty) {
+        const itemMap = new Map<string, InstagramPost>();
+        let latestUpdatedAt: string | null = null;
+
+        itemsSnap.forEach((d) => {
+          const postData = d.data() as InstagramPost & { updatedAt?: string };
+          itemMap.set(d.id, postData);
+          if (postData.updatedAt && (!latestUpdatedAt || postData.updatedAt > latestUpdatedAt)) {
+            latestUpdatedAt = postData.updatedAt;
+          }
+        });
+
+        // Read ordering from instagram_feed metadata doc
+        const metaRef = doc(db, SETTINGS_COLLECTION, 'instagram_feed');
+        const metaSnap = await getDoc(metaRef);
+        let orderedPosts: InstagramPost[] = [];
+
+        if (metaSnap.exists() && Array.isArray(metaSnap.data()?.order)) {
+          const order = metaSnap.data()?.order as string[];
+          for (const id of order) {
+            const item = itemMap.get(id);
+            if (item) {
+              orderedPosts.push(item);
+              itemMap.delete(id);
+            }
+          }
+        }
+        // Add any remaining items not in order list
+        itemMap.forEach((item) => orderedPosts.push(item));
+
+        if (orderedPosts.length > 0) {
+          if (latestUpdatedAt) {
+            (orderedPosts as any).__updatedAt = latestUpdatedAt;
+          }
+          return orderedPosts;
+        }
+      }
+
+      // 2. Fallback to legacy single document settings/instagram
       const docRef = doc(db, SETTINGS_COLLECTION, INSTAGRAM_DOC);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data && Array.isArray(data.items)) {
-          return data.items as InstagramPost[];
+          const posts = data.items as InstagramPost[];
+          if (data.updatedAt) {
+            (posts as any).__updatedAt = data.updatedAt;
+          }
+          return posts;
         }
       }
       return null;
@@ -235,7 +281,7 @@ export async function fetchInstagramFromFirestore(): Promise<InstagramPost[] | n
     }
   };
 
-  return withTimeout(fetchTask(), 4000, null);
+  return withTimeout(fetchTask(), 5000, null);
 }
 
 export async function saveInstagramToFirestore(posts: InstagramPost[]): Promise<boolean> {
@@ -245,16 +291,58 @@ export async function saveInstagramToFirestore(posts: InstagramPost[]): Promise<
   const saveTask = async (): Promise<boolean> => {
     try {
       await ensureFirebaseAuth();
-      const docRef = doc(db, SETTINGS_COLLECTION, INSTAGRAM_DOC);
       const cleaned = JSON.parse(JSON.stringify(posts));
-      await setDoc(
-        docRef,
+      const nowIso = new Date().toISOString();
+
+      // 1. Save each post as its own individual document in settings/instagram_feed/items/{postId}
+      // This bypasses the 1 MB document limit entirely — every single post has its own 1 MB capacity!
+      const batch = writeBatch(db);
+      for (const post of cleaned) {
+        if (!post.id) continue;
+        const itemRef = doc(db, SETTINGS_COLLECTION, 'instagram_feed', 'items', post.id);
+        batch.set(itemRef, { ...post, updatedAt: nowIso }, { merge: true });
+      }
+
+      // Store ordering in instagram_feed meta doc
+      const metaRef = doc(db, SETTINGS_COLLECTION, 'instagram_feed');
+      batch.set(
+        metaRef,
         {
-          items: cleaned,
-          updatedAt: new Date().toISOString(),
+          order: cleaned.map((p: InstagramPost) => p.id),
+          updatedAt: nowIso,
         },
         { merge: true }
       );
+
+      // Clean up any deleted posts from the subcollection
+      try {
+        const itemsCol = collection(db, SETTINGS_COLLECTION, 'instagram_feed', 'items');
+        const existingSnap = await getDocs(itemsCol);
+        const currentIds = new Set(cleaned.map((p: InstagramPost) => p.id));
+        existingSnap.forEach((d) => {
+          if (!currentIds.has(d.id)) {
+            batch.delete(d.ref);
+          }
+        });
+      } catch (_) {}
+
+      await batch.commit();
+
+      // 2. Also try saving to legacy single document (for backward compatibility if under 1 MB)
+      try {
+        const docRef = doc(db, SETTINGS_COLLECTION, INSTAGRAM_DOC);
+        await setDoc(
+          docRef,
+          {
+            items: cleaned,
+            updatedAt: nowIso,
+          },
+          { merge: true }
+        );
+      } catch (_) {
+        // If the legacy single doc exceeds 1MB, it's totally fine because the individual item docs above succeeded!
+      }
+
       return true;
     } catch (err) {
       console.warn('Error saving instagram to Firestore:', err);
@@ -262,7 +350,7 @@ export async function saveInstagramToFirestore(posts: InstagramPost[]): Promise<
     }
   };
 
-  return withTimeout(saveTask(), 5000, false);
+  return withTimeout(saveTask(), 8000, false);
 }
 
 // -------------------------------------------------------------

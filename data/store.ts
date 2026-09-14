@@ -268,6 +268,7 @@ export const STORAGE_KEYS = {
   ADMIN_EMAILS: 'mummabee_admin_emails',
   GIVEAWAY: 'mummabee_giveaway',
   GIVEAWAY_ENTRIES: 'mummabee_giveaway_entries',
+  INSTAGRAM_UPDATED_AT: 'mummabee_instagram_updated_at',
 };
 
 // Default Fallbacks
@@ -1335,8 +1336,18 @@ export function getInitialInstagramPosts(): InstagramPost[] {
   }
 }
 
-export async function saveInstagramPosts(posts: InstagramPost[]): Promise<boolean> {
+/** Get the local updatedAt timestamp for Instagram posts */
+export function getInstagramUpdatedAt(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(STORAGE_KEYS.INSTAGRAM_UPDATED_AT) || null;
+}
+
+export async function saveInstagramPosts(posts: InstagramPost[]): Promise<{ success: boolean; firestoreFailed?: boolean }> {
+  const now = new Date().toISOString();
   safeSetLocalStorage(STORAGE_KEYS.INSTAGRAM, JSON.stringify(posts));
+  safeSetLocalStorage(STORAGE_KEYS.INSTAGRAM_UPDATED_AT, now);
+
+  let firestoreFailed = false;
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('mummabee_content_updated', {
@@ -1344,12 +1355,17 @@ export async function saveInstagramPosts(posts: InstagramPost[]): Promise<boolea
       })
     );
     try {
-      await saveInstagramToFirestore(posts);
+      const saved = await saveInstagramToFirestore(posts);
+      if (!saved) {
+        firestoreFailed = true;
+        console.warn('Firestore save returned false — document may be too large.');
+      }
     } catch (e) {
+      firestoreFailed = true;
       console.warn('Could not sync instagram with Firestore:', e);
     }
   }
-  return true;
+  return { success: true, firestoreFailed };
 }
 
 export function getInitialInquiries(): Inquiry[] {
